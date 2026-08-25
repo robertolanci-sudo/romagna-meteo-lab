@@ -42,19 +42,38 @@ async function fetchLiveForecast(slug: string, model: string) {
   };
   const point = coordinates[slug];
   if (!point) return { status: 404, body: { error: 'location_not_found' } };
-  const url = new URL('https://api.open-meteo.com/v1/forecast');
-  url.searchParams.set('latitude', String(point[0]));
-  url.searchParams.set('longitude', String(point[1]));
-  url.searchParams.set('hourly', 'temperature_2m,precipitation,wind_speed_10m');
-  url.searchParams.set('models', model);
-  url.searchParams.set('timezone', 'UTC');
-  const upstream = await fetch(url);
+  const buildUrl = (requestedModel?: string) => {
+    const url = new URL('https://api.open-meteo.com/v1/forecast');
+    url.searchParams.set('latitude', String(point[0]));
+    url.searchParams.set('longitude', String(point[1]));
+    url.searchParams.set('hourly', 'temperature_2m,precipitation,wind_speed_10m');
+    if (requestedModel) url.searchParams.set('models', requestedModel);
+    url.searchParams.set('timezone', 'UTC');
+    return url;
+  };
+  let selectedModel = model;
+  let upstream = await fetch(buildUrl(model));
   if (!upstream.ok)
     return {
       status: 502,
       body: { error: 'provider_unavailable', providerStatus: upstream.status },
     };
-  const payload = (await upstream.json()) as { hourly?: Record<string, unknown[]> };
+  let payload = (await upstream.json()) as {
+    hourly?: Record<string, unknown[]>;
+    model?: string;
+  };
+  const hasNumericValue = Object.entries(payload.hourly ?? {})
+    .filter(([key]) => key !== 'time')
+    .some(
+      ([, values]) => Array.isArray(values) && values.some((value) => typeof value === 'number'),
+    );
+  if (!hasNumericValue && model !== 'best_match') {
+    const fallback = await fetch(buildUrl());
+    if (fallback.ok) {
+      payload = (await fallback.json()) as typeof payload;
+      selectedModel = payload.model ?? 'best_match';
+    }
+  }
   const hourly = payload.hourly;
   const times = Array.isArray(hourly?.time) ? (hourly.time as string[]) : [];
   if (!times.length) return { status: 502, body: { error: 'malformed_provider_payload' } };
@@ -70,7 +89,7 @@ async function fetchLiveForecast(slug: string, model: string) {
       variable,
       value: typeof value === 'number' ? value : null,
       unit,
-      model,
+      model: selectedModel,
     })),
   );
   return {
@@ -79,7 +98,7 @@ async function fetchLiveForecast(slug: string, model: string) {
       data,
       meta: {
         source: 'open-meteo',
-        dataset: model,
+        dataset: selectedModel,
         retrievedAt: new Date().toISOString(),
         attribution: 'Weather data by Open-Meteo.com',
       },
