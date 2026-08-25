@@ -5,9 +5,9 @@ Updated by the Codex orchestrator or a human reviewer.
 ## Current
 
 - milestone: `M6`
-- last task: `T025`
-- next safe tasks: `none — T026 human gate ready`
-- human gate: `T026` Vercel account, environment variables and production approval
+- last task: `T026`
+- next safe tasks: `none — production smoke test passed`
+- human gate: `T026` complete; Vercel production deployment approved by project owner
 - blockers: direct ARPAE redistribution remains disabled pending dataset-specific terms
 
 ## Log
@@ -44,3 +44,4 @@ Updated by the Codex orchestrator or a human reviewer.
 - 2026-08-25 — live Vercel API wiring; health, forecast and marine serverless routes added; dashboard now attempts server-side forecast data with demo fallback.
 - 2026-08-25 — Vercel runtime fix; serverless routes no longer load workspace package imports at runtime, preserving server-side provider access and local fallback.
 - 2026-08-25T14:37:55.553Z — human gate pending: T026
+- 2026-08-25 — T026 done; production URL, health, forecast and marine routes verified. Forecast falls back to Open-Meteo `best_match` when a forced model has no numeric coverage.
