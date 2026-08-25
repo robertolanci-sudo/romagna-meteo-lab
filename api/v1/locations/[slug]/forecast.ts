@@ -1,7 +1,4 @@
-import { ForecastApi } from '@romagna-meteo/api';
-import { findLocation } from '@romagna-meteo/domain';
-import { ForecastStore } from '@romagna-meteo/jobs';
-import { OpenMeteoForecastAdapter } from '@romagna-meteo/providers';
+import { fetchForecast } from '../../../_lib/weather.js';
 
 type VercelRequest = {
   method?: string;
@@ -23,22 +20,12 @@ export default async function handler(
     return;
   }
   const url = new URL(request.url ?? '/', 'https://romagna-meteo-lab.vercel.app');
-  const slug = url.pathname.split('/').filter(Boolean).at(-2);
-  const location = slug ? findLocation(slug) : undefined;
-  if (!location) {
-    response.status(404).send(JSON.stringify({ error: 'location_not_found' }));
-    return;
-  }
+  const slug = url.pathname.split('/').filter(Boolean).at(-2) ?? '';
   try {
-    const adapter = new OpenMeteoForecastAdapter();
     const model = url.searchParams.get('models') ?? 'ecmwf_ifs04';
-    const store = new ForecastStore();
-    store.upsert(await adapter.fetch(location, model));
-    const api = new ForecastApi(store);
-    const webRequest = new Request(url, { headers: { 'x-client-id': 'vercel-public' } });
-    const result = await api.handle(webRequest);
+    const result = await fetchForecast(slug, model);
     response.status(result.status).setHeader('content-type', 'application/json; charset=utf-8');
-    response.send(await result.text());
+    response.send(JSON.stringify(result.body));
   } catch (error) {
     response.status(502).send(
       JSON.stringify({

@@ -1,5 +1,4 @@
-import { MarineApi } from '@romagna-meteo/api';
-import { OpenMeteoMarineAdapter } from '@romagna-meteo/providers';
+import { fetchMarine } from '../../../_lib/weather.js';
 
 type VercelRequest = { method?: string; url?: string };
 type VercelResponse = {
@@ -18,10 +17,15 @@ export default async function handler(
   }
   const url = new URL(request.url ?? '/', 'https://romagna-meteo-lab.vercel.app');
   try {
-    const api = new MarineApi(new OpenMeteoMarineAdapter());
-    const result = await api.handle(new Request(url));
+    const gridMode = url.searchParams.get('grid') ?? 'sea';
+    if (!['sea', 'nearest', 'land'].includes(gridMode)) {
+      response.status(400).send(JSON.stringify({ error: 'invalid_grid_mode' }));
+      return;
+    }
+    const slug = url.pathname.split('/').filter(Boolean).at(-2) ?? '';
+    const result = await fetchMarine(slug, gridMode);
     response.status(result.status).setHeader('content-type', 'application/json; charset=utf-8');
-    response.send(await result.text());
+    response.send(JSON.stringify(result.body));
   } catch (error) {
     response.status(502).send(
       JSON.stringify({
