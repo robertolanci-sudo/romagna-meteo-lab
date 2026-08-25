@@ -1,0 +1,13 @@
+{
+  "name": "@romagna-meteo/providers",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@romagna-meteo/contracts": "workspace:*",
+    "@romagna-meteo/domain": "workspace:*"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#090b18" />
+    <meta name="description" content="Romagna Meteo Lab — console multimodello per la Romagna." />
+    <title>Romagna Meteo Lab — Rimini</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #090b18;
+        --panel: #12152b;
+        --panel-2: #181c38;
+        --ink: #eef1ff;
+        --muted: #8e96b8;
+        --faint: #5d6485;
+        --line: rgba(172, 184, 255, 0.13);
+        --violet: #8879f7;
+        --cyan: #4ed6e9;
+        --green: #76dbb1;
+        --amber: #f0c275;
+        --radius: 20px;
+        --shadow: 0 18px 60px rgba(3, 4, 15, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.45 ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.35;
+        background:
+          radial-gradient(circle at 76% 0%, rgba(91, 73, 199, 0.23), transparent 27rem),
+          radial-gradient(circle at 0% 70%, rgba(22, 122, 154, 0.13), transparent 30rem);
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 248px minmax(0, 1fr);
+        min-height: 100dvh;
+      }
+      .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100dvh;
+        padding: 24px 16px;
+        border-right: 1px solid var(--line);
+        background: rgba(9, 11, 24, 0.82);
+        backdrop-filter: blur(24px);
+        display: flex;
+        flex-direction: column;
+        z-index: 4;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 0 12px 28px;
+      }
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(145, 133, 255, 0.7);
+        border-radius: 11px;
+        background: linear-gradient(145deg, rgba(121, 101, 242, 0.42), rgba(45, 219, 225, 0.12));
+        color: var(--cyan);
+        font-size: 20px;
+      }
+      .brand strong,
+      .brand span {
+        display: block;
+      }
+      .brand strong {
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .brand span,
+      .nav-label,
+      .sidebar-foot {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .nav-label {
+        margin: 14px 12px 9px;
+        color: var(--faint);
+        font:
+          10px ui-monospace,
+          monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+      }
+      .nav {
+        display: grid;
+        gap: 4px;
+      }
+      .nav button {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--muted);
+        text-align: left;
+        transition: 0.2s ease;
+      }
+      .nav button:hover,
+      .nav button.active {
+        border-color: var(--line);
+        background: rgba(118, 101, 242, 0.12);
+        color: var(--ink);
+        transform: translateX(2px);
+      }
+      .sidebar-foot {
+        margin-top: auto;
+        padding: 14px 12px 0;
+        border-top: 1px solid var(--line);
+      }
+      .sidebar-foot b {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--green);
+      }
+      .live-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-right: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(118, 219, 177, 0.11);
+      }
+      .main {
+        width: min(1440px, 100%);
+        min-width: 0;
+        padding: 0 34px 50px;
+      }
+      .topbar {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .mobile-menu {
+        display: none;
+        border: 0;
+        background: transparent;
+      }
+      .search {
+        flex: 1;
+        max-width: 480px;
+      }
+      .search input {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        outline: 0;
+        background: rgba(255, 255, 255, 0.035);
+      }
+      .search input:focus {
+        border-color: var(--violet);
+        box-shadow: 0 0 0 3px rgba(136, 121, 247, 0.12);
+      }
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-left: auto;
+      }
+      .icon-button,
+      .unit-select {
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+      .icon-button {
+        width: 38px;
+      }
+      .profile {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .page-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 24px;
+        padding: 32px 0 24px;
+      }
+      .eyebrow {
+        color: var(--cyan);
+        font:
+          11px ui-monospace,
+          monospace;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      h1 {
+        margin-top: 8px;
+        font-size: clamp(30px, 4vw, 48px);
+        line-height: 1;
+        letter-spacing: -0.055em;
+      }
+      .page-head p {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+      .date-card {
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.025);
+        text-align: right;
+      }
+      .date-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+      .hero-grid {
+        grid-template-columns: minmax(0, 1.5fr) minmax(250px, 0.8fr);
+      }
+      .split {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .panel {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(18, 21, 43, 0.78);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 17px 18px 13px;
+      }
+      .panel-head h2 {
+        font-size: 14px;
+      }
+      .panel-head small {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .hero {
+        position: relative;
+        min-height: 295px;
+        padding: 22px;
+        background: linear-gradient(
+          135deg,
+          rgba(44, 44, 108, 0.78),
+          rgba(14, 42, 69, 0.58) 58%,
+          rgba(14, 23, 42, 0.9)
+        );
+      }
+      .hero::after {
+        content: '';
+        position: absolute;
+        width: 240px;
+        height: 240px;
+        right: 9%;
+        top: 19px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(174, 157, 255, 0.6) 0 18%,
+          rgba(99, 130, 229, 0.25) 37%,
+          transparent 69%
+        );
+        filter: blur(5px);
+      }
+      .hero-copy {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 250px;
+        height: 100%;
+      }
+      .hero-location,
+      .metric-label,
+      .score-note {
+        color: var(--muted);
+      }
+      .hero-temp {
+        margin-top: auto;
+        font-size: clamp(64px, 9vw, 108px);
+        line-height: 0.85;
+        letter-spacing: -0.1em;
+        font-variant-numeric: tabular-nums;
+      }
+      .hero-temp sup {
+        color: #b1a8ff;
+        margin-left: 8px;
+        font-size: 26px;
+        letter-spacing: 0;
+      }
+      .hero-condition {
+        margin-top: 14px;
+        font-size: 16px;
+      }
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .hero-meta b {
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .hero-footer {
+        position: absolute;
+        right: 22px;
+        bottom: 22px;
+        z-index: 2;
+        color: var(--muted);
+        font:
+          11px ui-monospace,
+          monospace;
+      }
+      .summary {
+        padding-bottom: 18px;
+      }
+      .summary-body {
+        padding: 2px 18px 0;
+      }
+      .metric-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        border-top: 1px solid var(--line);
+      }
+      .metric {
+        padding: 16px 0 14px;
+      }
+      .metric:nth-child(odd) {
+        padding-right: 16px;
+        border-right: 1px solid var(--line);
+      }
+      .metric:nth-child(even) {
+        padding-left: 16px;
+      }
+      .metric-value {
+        margin-top: 5px;
+        font-size: 22px;
+        letter-spacing: -0.05em;
+        font-variant-numeric: tabular-nums;
+      }
+      .metric-value em {
+        color: var(--green);
+        font-size: 11px;
+        font-style: normal;
+        letter-spacing: 0;
+      }
+      .section {
+        margin-top: 16px;
+      }
+      .hourly {
+        display: grid;
+        grid-template-columns: repeat(10, minmax(74px, 1fr));
+        overflow: auto;
+        padding-bottom: 17px;
+      }
+      .hour {
+        padding: 12px 11px;
+        border-right: 1px solid var(--line);
+        text-align: center;
+      }
+      .hour:first-child {
+        background: rgba(136, 121, 247, 0.1);
+      }
+      .hour time {
+        display: block;
+        color: var(--muted);
+        font:
+          11px ui-monospace,
+          monospace;
+      }
+      .weather-icon {
+        height: 44px;
+        display: grid;
+        place-items: center;
+        color: #b1a8ff;
+        font-size: 24px;
+      }
+      .hour strong {
+        display: block;
+        font-size: 15px;
+        font-weight: 500;
+      }
+      .rain {
+        margin-top: 7px;
+        color: var(--cyan);
+        font-size: 11px;
+      }
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        padding: 3px 18px 18px;
+      }
+      .stat {
+        padding: 12px;
+        border-right: 1px solid var(--line);
+      }
+      .stat:last-child {
+        border: 0;
+      }
+      .stat small {
+        color: var(--muted);
+      }
+      .stat strong {
+        display: block;
+        margin-top: 7px;
+        font-size: 21px;
+        font-variant-numeric: tabular-nums;
+      }
+      .stat span {
+        color: var(--green);
+        font-size: 11px;
+      }
+      .chart {
+        height: 145px;
+        padding: 4px 18px 18px;
+      }
+      .spark {
+        width: 100%;
+        height: 100%;
+      }
+      .spark path {
+        fill: none;
+        stroke: var(--cyan);
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .marine {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        padding: 3px 18px 18px;
+      }
+      .marine .stat strong {
+        color: var(--ink);
+      }
+      .score {
+        padding: 3px 18px 19px;
+      }
+      .score-number {
+        font-size: 42px;
+        letter-spacing: -0.1em;
+      }
+      .score-number span {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0;
+      }
+      .meter {
+        height: 8px;
+        margin: 16px 0 9px;
+        overflow: hidden;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.07);
+      }
+      .meter i {
+        display: block;
+        width: 81%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--violet), var(--cyan));
+      }
+      .alerts {
+        padding-bottom: 15px;
+      }
+      .alert {
+        display: flex;
+        gap: 11px;
+        margin: 0 18px 9px;
+        padding: 11px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+      .alert strong {
+        display: block;
+        font-size: 12px;
+      }
+      .alert p {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .quick-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        padding: 2px 18px 18px;
+      }
+      .quick {
+        min-height: 76px;
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.025);
+        text-align: left;
+        transition: 0.2s ease;
+      }
+      .quick:hover {
+        border-color: rgba(172, 184, 255, 0.3);
+        background: rgba(136, 121, 247, 0.1);
+        transform: translateY(-2px);
+      }
+      .footer-note {
+        padding: 30px 4px 0;
+        color: var(--faint);
+        font:
+          10px ui-monospace,
+          monospace;
+      }
+      :focus-visible {
+        outline: 2px solid var(--cyan);
+        outline-offset: 3px;
+      }
+      @media (max-width: 1120px) {
+        .main {
+          padding-inline: 22px;
+        }
+        .quick-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 820px) {
+        .app {
+          display: block;
+        }
+        .sidebar {
+          position: fixed;
+          left: 0;
+          width: 248px;
+          transform: translateX(-102%);
+          transition: transform 0.25s ease;
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        .mobile-menu {
+          display: grid;
+          place-items: center;
+          width: 38px;
+          height: 38px;
+        }
+        .topbar {
+          height: 68px;
+        }
+        .hero-grid,
+        .split {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 560px) {
+        .main {
+          padding: 0 14px 35px;
+        }
+        .page-head {
+          align-items: start;
+          flex-direction: column;
+          padding-top: 26px;
+        }
+        .date-card {
+          text-align: left;
+        }
+        .metric-row {
+          grid-template-columns: 1fr 1fr;
+        }
+        .stat-grid,
+        .marine {
+          grid-template-columns: 1fr;
+        }
+        .stat {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        .stat:last-child {
+          border-bottom: 0;
+        }
+        .quick-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a
+      href="#main"
+      style="
+        position: absolute;
+        left: -9999px;
+        top: 8px;
+        padding: 8px;
+        background: #181c38;
+        color: #eef1ff;
+        z-index: 9;
+      "
+      onfocus="this.style.left = '8px'"
+      onblur="this.style.left = '-9999px'"
+      >Vai al contenuto</a
+    >
+    <div class="app">
+      <aside class="sidebar" id="sidebar" aria-label="Navigazione principale">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">⌁</div>
+          <div><strong>Romagna Meteo</strong><span>Lab / console 01</span></div>
+        </div>
+        <div class="nav-label">Workspace</div>
+        <nav class="nav">
+          <button class="active" data-target="overview">Overview</button
+          ><button data-target="forecast">Forecast lab</button
+          ><button data-target="marine">Marine / SST</button
+          ><button data-target="history">Climate history</button
+          ><button data-target="alerts">Allerte</button>
+        </nav>
+        <div class="nav-label">Tools</div>
+        <nav class="nav">
+          <button data-target="quick">Quick access</button
+          ><button data-target="studio">Widget studio</button>
+        </nav>
+        <div class="sidebar-foot">
+          <b><span class="live-dot"></span>Data stream online</b>Ultimo sync: 08:42 CET<br />ECMWF ·
+          ICON · Météo-France
+        </div>
+      </aside>
+      <main class="main" id="main" tabindex="-1">
+        <header class="topbar">
+          <button class="mobile-menu" id="menuBtn" aria-label="Apri navigazione">☰</button
+          ><label class="search"
+            ><input
+              id="searchInput"
+              type="search"
+              placeholder="Cerca città, modello, parametro…"
+              aria-label="Cerca nella dashboard"
+          /></label>
+          <div class="top-actions">
+            <button class="icon-button" id="refreshBtn" aria-label="Aggiorna dati">↻</button
+            ><select class="unit-select" id="unitSelect" aria-label="Unità temperatura">
+              <option value="c">°C</option>
+              <option value="f">°F</option>
+            </select>
+            <div class="profile">Rimini / IT</div>
+          </div>
+        </header>
+        <section class="page-head" id="overview">
+          <div>
+            <div class="eyebrow">Martedì 25 agosto 2026 · 08:42 CET</div>
+            <h1>Buongiorno, Rimini.</h1>
+            <p>Una lettura compatta del cielo sopra la costa romagnola.</p>
+          </div>
+          <div class="date-card">
+            <strong>Prossimo update</strong><span>tra 18 min · affidabilità alta</span>
+          </div>
+        </section>
+        <section class="grid hero-grid">
+          <article class="panel hero">
+            <div class="hero-copy">
+              <div class="hero-location">Rimini centro · 44.06°N, 12.57°E</div>
+              <div class="hero-temp"><span data-temp="27">27</span><sup>°C</sup></div>
+              <div class="hero-condition">Sereno con velature alte</div>
+              <div class="hero-meta">
+                <span>Percepita <b>28°</b></span
+                ><span>Vento <b>NE 9 km/h</b></span
+                ><span>Umidità <b>61%</b></span>
+              </div>
+            </div>
+            <div class="hero-footer"><span class="live-dot"></span>live observation</div>
+          </article>
+          <article class="panel summary">
+            <div class="panel-head">
+              <h2>Quadro rapido</h2>
+              <small>ora</small>
+            </div>
+            <div class="summary-body">
+              <div class="metric-row">
+                <div class="metric">
+                  <div class="metric-label">Pressione</div>
+                  <div class="metric-value">1018 <em>hPa</em></div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Visibilità</div>
+                  <div class="metric-value">18.4 <em>km</em></div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Alba / tramonto</div>
+                  <div class="metric-value">06:19 / 20:07</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">UV index</div>
+                  <div class="metric-value">6 <em>alto</em></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+        <section class="panel section" id="forecast">
+          <div class="panel-head">
+            <h2>Previsione oraria</h2>
+            <small>prossime 10 ore · ECMWF blend</small>
+          </div>
+          <div class="hourly" id="hourly"></div>
+        </section>
+        <section class="grid split section">
+          <article class="panel">
+            <div class="panel-head">
+              <h2>Temperatura · 48 ore</h2>
+              <small>forecast multimodello</small>
+            </div>
+            <div class="chart">
+              <svg
+                class="spark"
+                viewBox="0 0 600 150"
+                preserveAspectRatio="none"
+                role="img"
+                aria-label="Grafico temperatura"
+              >
+                <path
+                  d="M0 110 C50 100 75 85 120 92 S185 40 235 55 S300 95 350 72 S410 42 460 63 S530 30 600 38"
+                />
+              </svg>
+            </div>
+            <details style="padding: 0 18px 18px">
+              <summary style="color: var(--cyan); cursor: pointer; font-size: 11px">
+                Apri tabella dati
+              </summary>
+              <table
+                style="
+                  width: 100%;
+                  margin-top: 10px;
+                  border-collapse: collapse;
+                  color: var(--muted);
+                  font-size: 11px;
+                "
+              >
+                <caption style="text-align: left; padding-bottom: 6px">
+                  Tmax osservata per il 25 agosto
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style="text-align: left">Anno</th>
+                    <th scope="col" style="text-align: right">°C</th>
+                    <th scope="col" style="text-align: right">Dataset</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row" style="text-align: left; font-weight: 500">2022</th>
+                    <td style="text-align: right">28.4</td>
+                    <td style="text-align: right">historical-weather</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" style="text-align: left; font-weight: 500">2023</th>
+                    <td style="text-align: right">30.1</td>
+                    <td style="text-align: right">historical-weather</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" style="text-align: left; font-weight: 500">2024</th>
+                    <td style="text-align: right">27.6</td>
+                    <td style="text-align: right">historical-weather</td>
+                  </tr>
+                </tbody>
+              </table>
+            </details>
+          </article>
+          <article class="panel">
+            <div class="panel-head">
+              <h2>Confronto modelli</h2>
+              <small>temperatura · oggi</small>
+            </div>
+            <div class="stat-grid" id="modelGrid">
+              <div class="stat">
+                <small>minima</small><strong>22.4°</strong><span>+0.3 vs ieri</span>
+              </div>
+              <div class="stat">
+                <small>massima</small><strong>30.8°</strong><span>+1.1 vs media</span>
+              </div>
+              <div class="stat">
+                <small>spread</small><strong>1.7°</strong><span>consistenza alta</span>
+              </div>
+            </div>
+          </article>
+        </section>
+        <section class="grid split section">
+          <article class="panel" id="marine">
+            <div class="panel-head">
+              <h2>Marine / SST</h2>
+              <small>Adriatico · Rimini</small>
+            </div>
+            <div class="marine">
+              <div class="stat">
+                <small>SST</small><strong>26.1°</strong><span>+0.8° anomalia</span>
+              </div>
+              <div class="stat"><small>onda</small><strong>0.4 m</strong><span>NE · 7 s</span></div>
+              <div class="stat">
+                <small>beach score</small><strong>81 / 100</strong><span>calcolo v1</span>
+              </div>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head">
+              <h2>Consensus</h2>
+              <small>accordo tra 24 membri</small>
+            </div>
+            <div class="score">
+              <div class="score-number">86<span>%</span></div>
+              <div class="meter"><i style="width: 86%"></i></div>
+              <div class="score-note">
+                Dispersione tra modelli contenuta; non è una probabilità.
+              </div>
+            </div>
+          </article>
+        </section>
+        <section class="grid split section">
+          <article class="panel" id="history">
+            <div class="panel-head">
+              <h2>Storico 5 anni</h2>
+              <small>giorno 25 agosto · Tmax</small>
+            </div>
+            <div class="chart">
+              <svg
+                class="spark"
+                viewBox="0 0 600 150"
+                preserveAspectRatio="none"
+                aria-label="Grafico storico"
+              >
+                <path d="M0 100 L120 66 L240 84 L360 45 L480 73 L600 53" />
+              </svg>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head">
+              <h2>Model battle</h2>
+              <small>accuratezza ultimi 30 giorni</small>
+            </div>
+            <div class="score">
+              <p class="score-note">MAE temperatura, lead 0–24h</p>
+              <div class="meter"><i style="width: 66%"></i></div>
+              <p class="score-note">ECMWF · 1.2 °C · campioni verificati</p>
+              <div class="meter"><i style="width: 56%; background: var(--cyan)"></i></div>
+              <p class="score-note">ICON · 1.5 °C · campioni verificati</p>
+            </div>
+          </article>
+        </section>
+        <section class="grid split section">
+          <article class="panel alerts" id="alerts">
+            <div class="panel-head">
+              <h2>Allerte e segnali</h2>
+              <small>nessuna criticità</small>
+            </div>
+            <div class="alert">
+              <div aria-hidden="true">!</div>
+              <div>
+                <strong>UV elevato nel pomeriggio</strong>
+                <p>Indice 6–7 tra le 12:00 e le 16:00. Protezione consigliata.</p>
+              </div>
+            </div>
+            <div class="alert">
+              <div aria-hidden="true">↗</div>
+              <div>
+                <strong>Segnale vento costiero</strong>
+                <p>Nessuna allerta attiva. Raffiche sotto 25 km/h.</p>
+              </div>
+            </div>
+          </article>
+          <article class="panel" id="quick">
+            <div class="panel-head">
+              <h2>Accesso rapido</h2>
+              <small>strumenti frequenti</small>
+            </div>
+            <div class="quick-grid">
+              <button class="quick" data-toast="Mappa sinottica pronta per il caricamento.">
+                Mappa sinottica</button
+              ><button class="quick" data-toast="Esportazione CSV demo avviata.">
+                Esporta dati</button
+              ><button class="quick" data-toast="Link condivisibile copiato negli appunti.">
+                Condividi view</button
+              ><button class="quick" data-toast="Stazione Rimini: online, 1.8 min fa.">
+                Stazioni
+              </button>
+            </div>
+          </article>
+        </section>
+        <section class="panel section" id="studio">
+          <div class="panel-head">
+            <h2>Widget studio</h2>
+            <small>componi la tua vista</small>
+          </div>
+          <div class="score">
+            <p>Salva una vista personalizzata per hotel, spiagge e portali locali.</p>
+            <button class="quick" id="studioBtn">Apri configuratore →</button>
+          </div>
+        </section>
+        <div class="footer-note">
+          ROMAGNA METEO LAB · UI INTEGRATA · dati da API server-side · provenance visibile nei
+          payload
+        </div>
+      </main>
+    </div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script type="module">
+      const hourlyData = [27, 28, 29, 30, 30, 31, 30, 29, 28, 27];
+      document.querySelector('#hourly').innerHTML = hourlyData
+        .map(
+          (temp, index) =>
+            `<div class="hour"><time>${index === 0 ? 'ora' : `${index + 8}:00`}</time><div class="weather-icon">${index % 3 === 2 ? '◒' : '☼'}</div><strong data-temp="${temp}">${temp}°</strong><div class="rain">${2 + index}%</div></div>`,
+        )
+        .join('');
+      const toast = (message) => {
+        const node = document.querySelector('#toast');
+        node.textContent = message;
+        node.style.cssText =
+          'position:fixed;right:24px;bottom:24px;padding:12px 14px;border:1px solid rgba(172,184,255,.3);border-radius:12px;background:#181c38;box-shadow:0 18px 60px rgba(3,4,15,.35);z-index:10';
+        clearTimeout(window.__toast);
+        window.__toast = setTimeout(() => {
+          node.textContent = '';
+          node.removeAttribute('style');
+        }, 2600);
+      };
+      document
+        .querySelectorAll('[data-toast]')
+        .forEach((button) => button.addEventListener('click', () => toast(button.dataset.toast)));
+      document
+        .querySelector('#studioBtn')
+        .addEventListener('click', () =>
+          toast('Configuratore pronto per il collegamento a POST /v1/widgets/preview.'),
+        );
+      document
+        .querySelector('#refreshBtn')
+        .addEventListener('click', () => toast('Richiesta refresh inviata al layer API.'));
+      document.querySelector('#searchInput').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && event.target.value.trim())
+          toast(`Ricerca: “${event.target.value.trim()}”`);
+      });
+      document.querySelector('#unitSelect').addEventListener('change', (event) => {
+        document.querySelectorAll('[data-temp]').forEach((node) => {
+          const c = Number(node.dataset.temp);
+          node.textContent =
+            event.target.value === 'f' ? `${Math.round((c * 9) / 5 + 32)}°` : `${c}°`;
+        });
+      });
+      const sidebar = document.querySelector('#sidebar');
+      document
+        .querySelector('#menuBtn')
+        .addEventListener('click', () => sidebar.classList.toggle('open'));
+      document.querySelectorAll('[data-target]').forEach((button) =>
+        button.addEventListener('click', () => {
+          document
+            .getElementById(button.dataset.target)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          document
+            .querySelectorAll('[data-target]')
+            .forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+          sidebar.classList.remove('open');
+        }),
+      );
+    </script>
+  </body>
+</html>
