@@ -50,7 +50,7 @@ async function fetchLiveForecast(slug: string, model: string) {
       'current',
       'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,wind_speed_10m,wind_direction_10m,surface_pressure,visibility,uv_index,weather_code',
     );
-    url.searchParams.set('hourly', 'temperature_2m,precipitation,wind_speed_10m');
+    url.searchParams.set('hourly', 'temperature_2m,precipitation,wind_speed_10m,weather_code');
     url.searchParams.set('daily', 'sunrise,sunset');
     if (requestedModel) url.searchParams.set('models', requestedModel);
     url.searchParams.set('timezone', 'UTC');
@@ -90,6 +90,7 @@ async function fetchLiveForecast(slug: string, model: string) {
     ['temperature_2m', '°C'],
     ['precipitation', 'mm'],
     ['wind_speed_10m', 'km/h'],
+    ['weather_code', ''],
   ] as const;
   const data = variables.flatMap(([variable, unit]) =>
     (Array.isArray(hourly?.[variable]) ? hourly[variable] : []).map((value, index) => ({

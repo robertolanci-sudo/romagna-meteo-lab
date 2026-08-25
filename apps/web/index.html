@@ -430,6 +430,40 @@
         place-items: center;
         color: #b1a8ff;
         font-size: 24px;
+        transition: color .25s ease, filter .25s ease, transform .25s ease;
+      }
+      .weather-icon.hot { color: #ff392f; filter: drop-shadow(0 0 10px rgba(255, 57, 47, .7)); }
+      .weather-icon.warm { color: #ff9d35; }
+      .weather-icon.cool { color: #70d8ff; }
+      .weather-icon.rainy { color: #53b9ef; }
+      .weather-icon.storm { color: #ffe06a; filter: drop-shadow(0 0 8px rgba(255, 224, 106, .55)); }
+      .weather-icon span { display: block; animation: weatherFloat 2.8s ease-in-out infinite; }
+      @keyframes weatherFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+      .weather-scene {
+        position: absolute;
+        z-index: 1;
+        top: 25px;
+        right: 24px;
+        width: 190px;
+        height: 150px;
+        pointer-events: none;
+      }
+      .weather-scene svg { width: 100%; height: 100%; overflow: visible; }
+      .scene-sun { fill: #ffd86b; filter: drop-shadow(0 0 18px rgba(255, 216, 107, .8)); animation: scenePulse 3s ease-in-out infinite; transform-origin: 140px 45px; }
+      .scene-rays { stroke: #ffcf58; stroke-width: 3; stroke-linecap: round; opacity: .8; animation: sceneSpin 12s linear infinite; transform-origin: 140px 45px; }
+      .scene-cloud { fill: #c5d6f2; opacity: .9; animation: sceneDrift 5s ease-in-out infinite; }
+      .scene-cloud.back { fill: #7287b8; opacity: .6; animation-delay: -2s; }
+      .scene-drop { stroke: #55c8f2; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 8 10; animation: sceneRain 1.2s linear infinite; opacity: 0; }
+      .weather-scene.rain .scene-drop, .weather-scene.storm .scene-drop { opacity: .9; }
+      .scene-bolt { fill: #ffe36a; opacity: 0; animation: sceneBolt 2.5s ease-in-out infinite; }
+      .weather-scene.storm .scene-bolt { opacity: 1; }
+      .weather-scene.hot .scene-sun { fill: #ff4b36; filter: drop-shadow(0 0 22px rgba(255, 63, 38, .85)); }
+      .weather-scene.hot .scene-rays { stroke: #ff5140; }
+      @keyframes scenePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+      @keyframes sceneSpin { to { transform: rotate(360deg); } }
+      @keyframes sceneDrift { 0%,100% { transform: translateX(0); } 50% { transform: translateX(-8px); } }
+      @keyframes sceneRain { to { stroke-dashoffset: -36px; transform: translateY(12px); } }
+      @keyframes sceneBolt { 0%,72%,100% { opacity: 0; } 75%,82% { opacity: 1; } }
       }
       .hour strong {
         display: block;
@@ -881,7 +915,31 @@
               <div class="hero-temp">
                 <span id="currentTemp" data-temp="29.2">29.2</span><sup>°C</sup>
               </div>
-              <div class="hero-condition">Sereno con velature alte</div>
+              <div class="hero-condition" id="currentCondition">Condizione corrente</div>
+              <div
+                class="weather-scene"
+                id="weatherScene"
+                aria-label="Animazione del clima corrente"
+              >
+                <svg viewBox="0 0 190 150" role="img" aria-hidden="true">
+                  <g class="scene-rays">
+                    <path
+                      d="M140 8v14M140 68v14M103 45h14M163 45h14M114 19l10 10M166 71l-10-10M166 19l-10 10M114 71l10-10"
+                    />
+                  </g>
+                  <circle class="scene-sun" cx="140" cy="45" r="22" />
+                  <path
+                    class="scene-cloud back"
+                    d="M20 82c0-14 15-24 29-18 5-13 24-18 36-7 6-5 16-3 19 6 15-3 29 8 29 22H20c0-1 0-2 0-3z"
+                  />
+                  <path
+                    class="scene-cloud"
+                    d="M34 93c0-15 16-24 30-17 6-15 28-18 39-5 15-4 30 7 30 22H34z"
+                  />
+                  <path class="scene-drop" d="M52 111v12M76 111v12M100 111v12M124 111v12" />
+                  <path class="scene-bolt" d="M143 98h15l-9 17h9l-21 27 6-20h-9z" />
+                </svg>
+              </div>
               <div class="hero-meta">
                 <span>Percepita <b id="feelsLike">32.2°</b></span
                 ><span>Vento <b id="currentWind">NE 7.7 km/h</b></span
@@ -1353,6 +1411,20 @@
         if ([95, 96, 99].includes(code)) return 'Temporale';
         return 'Condizione corrente';
       };
+      const weatherGlyph = (code, temp) => {
+        if ([95, 96, 99].includes(code)) return { glyph: 'ϟ', type: 'storm' };
+        if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code))
+          return { glyph: '☂', type: 'rainy' };
+        if ([45, 48].includes(code)) return { glyph: '☁', type: 'cool' };
+        if (temp > 30) return { glyph: '☀', type: 'hot' };
+        if (temp >= 25) return { glyph: '☀', type: 'warm' };
+        return { glyph: '☼', type: 'cool' };
+      };
+      const renderWeatherScene = (code, temp) => {
+        const scene = document.querySelector('#weatherScene');
+        if (!scene) return;
+        scene.className = `weather-scene ${[51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code) ? 'rain' : ''} ${[95, 96, 99].includes(code) ? 'storm' : ''} ${temp > 30 ? 'hot' : ''}`;
+      };
       const byVariable = (data, variable) =>
         new Map(
           (data || [])
@@ -1365,11 +1437,14 @@
           .slice(0, 12);
         const rain = byVariable(payload.data, 'precipitation');
         const wind = byVariable(payload.data, 'wind_speed_10m');
+        const weatherCodes = byVariable(payload.data, 'weather_code');
         document.querySelector('#hourly').innerHTML = temperatures
           .map((point, index) => {
             const temp = Number(point.value);
             const rainValue = rain.get(point.validAt)?.value;
-            return `<div class="hour"><time>${index === 0 ? 'ora' : formatTime(point.validAt)}</time><div class="weather-icon">${index % 3 === 2 ? '◒' : '☼'}</div><strong data-temp="${temp}">${formatTemp(temp)}</strong><div class="rain">${typeof rainValue === 'number' ? `${Math.round(rainValue * 10) / 10} mm` : '—'}</div></div>`;
+            const code = Number(weatherCodes.get(point.validAt)?.value ?? 0);
+            const icon = weatherGlyph(code, temp);
+            return `<div class="hour"><time>${index === 0 ? 'ora' : formatTime(point.validAt)}</time><div class="weather-icon ${icon.type}" title="${condition(code)}"><span>${icon.glyph}</span></div><strong data-temp="${temp}">${formatTemp(temp)}</strong><div class="rain">${typeof rainValue === 'number' ? `${Math.round(rainValue * 10) / 10} mm` : '—'}</div></div>`;
           })
           .join('');
         document.querySelector('#forecastTable').innerHTML = temperatures
@@ -1412,6 +1487,7 @@
             `${Math.round(current.uv_index * 10) / 10} <em>${current.uv_index >= 6 ? 'alto' : current.uv_index >= 3 ? 'moderato' : 'basso'}</em>`;
         if (typeof current.weather_code === 'number')
           document.querySelector('#currentCondition').textContent = condition(current.weather_code);
+        renderWeatherScene(Number(current.weather_code ?? 0), temp);
         const sunrise = window.payloadDaily?.sunrise?.[0];
         const sunset = window.payloadDaily?.sunset?.[0];
         if (sunrise && sunset)
