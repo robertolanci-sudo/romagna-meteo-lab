@@ -6,6 +6,8 @@
     <meta name="theme-color" content="#090b18" />
     <meta name="description" content="Romagna Meteo Lab — console multimodello per la Romagna." />
     <title>Romagna Meteo Lab — Rimini</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
       :root {
         color-scheme: dark;
@@ -663,6 +665,31 @@
         width: 100%;
         min-height: 360px;
       }
+      #leafletMap {
+        height: 460px;
+        width: 100%;
+        background: #10213c;
+      }
+      .leaflet-container {
+        font:
+          11px ui-monospace,
+          monospace;
+      }
+      .leaflet-control-attribution {
+        background: rgba(9, 11, 24, 0.86) !important;
+        color: #cbd1e9;
+      }
+      .leaflet-control-attribution a {
+        color: var(--cyan);
+      }
+      .wind-marker {
+        display: block;
+        color: #eef1ff;
+        font-size: 22px;
+        line-height: 22px;
+        text-shadow: 0 1px 4px #090b18;
+        transform-origin: 50% 50%;
+      }
       .map-label {
         fill: rgba(238, 241, 255, 0.7);
         font:
@@ -1013,8 +1040,8 @@
         <section class="grid split section">
           <article class="panel" id="history">
             <div class="panel-head">
-              <h2>Storico 5 anni</h2>
-              <small>giorno 25 agosto · Tmax</small>
+              <h2>Storico ERA5‑Land</h2>
+              <small>ultimo mese · Tmax</small>
             </div>
             <div class="chart">
               <svg
@@ -1023,7 +1050,7 @@
                 preserveAspectRatio="none"
                 aria-label="Grafico storico"
               >
-                <path d="M0 100 L120 66 L240 84 L360 45 L480 73 L600 53" />
+                <path id="historySpark" d="M0 100 L120 66 L240 84 L360 45 L480 73 L600 53" />
               </svg>
             </div>
           </article>
@@ -1141,6 +1168,7 @@
           <div class="map-toolbar" role="group" aria-label="Controlli mappa meteo">
             <button class="active" data-map-layer="precipitation">Precipitazioni</button>
             <button data-map-layer="wind">Vento</button>
+            <button id="mapPlay" type="button">▶ Avvia animazione</button>
             <label
               >Ora <input id="mapTime" type="range" min="0" max="23" value="0" step="1"
             /></label>
@@ -1152,9 +1180,7 @@
             role="img"
             aria-label="Mappa live di precipitazioni e vento sulla Romagna"
           >
-            <svg viewBox="0 0 800 420" preserveAspectRatio="none">
-              <text class="map-label" x="24" y="34">Caricamento griglia meteo…</text>
-            </svg>
+            <div id="leafletMap"></div>
           </div>
           <p class="source-note" id="mapSource">
             Fonte: Open‑Meteo · griglia indicativa, aggiornamento automatico.
@@ -1204,32 +1230,42 @@
         <section class="panel section detail-page" id="history-detail">
           <div class="eyebrow">Approfondimento · clima</div>
           <h2>Climate history</h2>
-          <p class="detail-intro">
-            Questa sezione è predisposta per confrontare osservazioni storiche, anomalie e giorni
-            omologhi. I valori demo non vengono più presentati come misure live.
+          <p class="detail-intro" id="historyIntro">
+            Caricamento dell’archivio ERA5‑Land per Rimini…
           </p>
           <div class="detail-grid">
             <article class="detail-card">
               <h3>Dataset</h3>
-              <p>historical-weather · da collegare a storage persistente</p>
+              <p id="historyDataset">ERA5‑Land · archivio storico</p>
             </article>
             <article class="detail-card">
               <h3>Metodo</h3>
-              <p>Aggregati mensili, baseline dichiarata e anomalia rispetto alla climatologia.</p>
+              <p id="historyCoverage">Intervallo in caricamento…</p>
             </article>
             <article class="detail-card">
               <h3>Stato</h3>
-              <p>Interfaccia pronta; import storico da attivare con fonte e licenza approvate.</p>
+              <p id="historyStatus">Dati reanalisi con attribuzione Copernicus C3S.</p>
             </article>
           </div>
-          <div class="detail-actions">
-            <button
-              class="quick"
-              data-toast="Lo storico sarà abilitato dopo l’import del dataset autorizzato."
-            >
-              Verifica disponibilità storico
-            </button>
-          </div>
+          <table class="data-table">
+            <caption class="source-note">
+              Giorno omologo più recente disponibile · Tmax
+            </caption>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tmax</th>
+                <th>Tmin</th>
+                <th>Media</th>
+                <th>Pioggia</th>
+              </tr>
+            </thead>
+            <tbody id="historyTable">
+              <tr>
+                <td colspan="5">Caricamento dati storici…</td>
+              </tr>
+            </tbody>
+          </table>
         </section>
         <div class="footer-note">
           ROMAGNA METEO LAB · UI INTEGRATA · dati da API server-side · provenance visibile nei
@@ -1340,50 +1376,58 @@
       };
       let mapPayload;
       let mapLayer = 'precipitation';
+      let leafletMap;
+      let mapPoints = [];
+      let mapTimer;
       const mapColor = (value) => {
         if (mapLayer === 'wind')
           return `hsl(${Math.max(185, 220 - Math.min(value, 60) * 1.2)} 78% ${Math.max(42, 72 - Math.min(value, 60) * 0.4)}%)`;
         const intensity = Math.min(Number(value || 0) / 8, 1);
         return `hsl(${Math.max(190, 210 - intensity * 170)} 82% ${Math.max(36, 72 - intensity * 28)}%)`;
       };
+      const initializeLeafletMap = () => {
+        if (leafletMap || !window.L) return;
+        leafletMap = L.map('leafletMap', { zoomControl: true, preferCanvas: true }).setView(
+          [44.08, 12.35],
+          9,
+        );
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(leafletMap);
+      };
       const renderMap = () => {
         if (!mapPayload) return;
+        initializeLeafletMap();
+        if (!leafletMap) return;
         const index = Number(document.querySelector('#mapTime').value);
-        const minLat = 43.75,
-          maxLat = 44.35,
-          minLon = 11.95,
-          maxLon = 13.07;
-        const x = (lon) => ((lon - minLon) / (maxLon - minLon)) * 800;
-        const y = (lat) => 420 - ((lat - minLat) / (maxLat - minLat)) * 420;
-        const pointAt = (point) =>
-          mapLayer === 'wind' ? point.windSpeed?.[index] : point.precipitation?.[index];
+        mapPoints.forEach((layer) => leafletMap.removeLayer(layer));
+        mapPoints = [];
         const time = mapPayload.times[index];
-        const cells = mapPayload.points
-          .map((point) => {
-            const value = Number(pointAt(point) ?? 0);
-            const px = x(point.longitude),
-              py = y(point.latitude);
-            const arrow =
-              mapLayer === 'wind'
-                ? `<line class="wind-arrow" x1="${px}" y1="${py}" x2="${px + Math.cos((((point.windDirection?.[index] ?? 0) - 90) * Math.PI) / 180) * 18}" y2="${py + Math.sin((((point.windDirection?.[index] ?? 0) - 90) * Math.PI) / 180) * 18}" />`
-                : '';
-            return `<circle class="map-point" cx="${px}" cy="${py}" r="${mapLayer === 'wind' ? 7 : 13}" fill="${mapColor(value)}" fill-opacity="${mapLayer === 'wind' ? 0.9 : Math.max(0.35, Math.min(0.95, 0.35 + value / 8))}" />${arrow}`;
-          })
-          .join('');
-        const gridLines =
-          [0, 1, 2, 3, 4, 5]
-            .map(
-              (i) => `<line class="map-grid-line" x1="0" y1="${i * 84}" x2="800" y2="${i * 84}" />`,
-            )
-            .join('') +
-          [0, 1, 2, 3, 4, 5, 6, 7]
-            .map(
-              (i) =>
-                `<line class="map-grid-line" x1="${i * 114.3}" y1="0" x2="${i * 114.3}" y2="420" />`,
-            )
-            .join('');
-        document.querySelector('#mapCanvas svg').innerHTML =
-          `<rect class="map-water" x="0" y="0" width="800" height="420" rx="12" />${gridLines}${cells}<text class="map-label" x="18" y="398">Romagna · ${mapLayer === 'wind' ? 'vento km/h' : 'precipitazione mm/h'}</text><text class="map-label" x="650" y="28">${mapPayload.meta?.dataset || 'best_match'}</text>`;
+        mapPayload.points.forEach((point) => {
+          const wind = Number(point.windSpeed?.[index] ?? 0);
+          const precipitation = Number(point.precipitation?.[index] ?? 0);
+          const marker =
+            mapLayer === 'wind'
+              ? L.marker([point.latitude, point.longitude], {
+                  icon: L.divIcon({
+                    className: '',
+                    html: `<span class="wind-marker" style="transform:rotate(${Number(point.windDirection?.[index] ?? 0) + 180}deg)">➤</span>`,
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11],
+                  }),
+                }).bindTooltip(`${wind} km/h · ${point.windDirection?.[index] ?? '—'}°`)
+              : L.circleMarker([point.latitude, point.longitude], {
+                  radius: 24,
+                  color: mapColor(precipitation),
+                  fillColor: mapColor(precipitation),
+                  fillOpacity: Math.max(0.2, Math.min(0.8, 0.2 + precipitation / 8)),
+                  weight: 1,
+                }).bindTooltip(`${precipitation} mm/h`);
+          marker.addTo(leafletMap);
+          mapPoints.push(marker);
+        });
         document.querySelector('#mapTimeLabel').textContent = time ? formatTime(time) : '—';
       };
       const loadLiveMap = async () => {
@@ -1402,6 +1446,46 @@
         } catch {
           document.querySelector('#mapSource').textContent =
             'Mappa non disponibile: il provider non ha risposto.';
+        }
+      };
+      const loadHistory = async () => {
+        try {
+          const response = await fetch('/api/v1/locations/rimini/history', {
+            headers: { 'x-client-id': 'dashboard' },
+          });
+          if (!response.ok) throw new Error('history unavailable');
+          const payload = await response.json();
+          const meta = payload.meta || {};
+          document.querySelector('#historyIntro').textContent =
+            `Archivio ${meta.dataset || 'storico'} per Rimini · dati giornalieri dal ${meta.startDate} al ${meta.endDate}.`;
+          document.querySelector('#historyCoverage').textContent =
+            `${meta.startDate} → ${meta.endDate} · ${payload.annual?.length || 0} anni disponibili`;
+          document.querySelector('#historyTable').innerHTML =
+            (payload.anniversary || [])
+              .map(
+                (row) =>
+                  `<tr><td>${row.date}</td><td>${row.max ?? '—'} °C</td><td>${row.min ?? '—'} °C</td><td>${row.mean ?? '—'} °C</td><td>${row.precipitation ?? '—'} mm</td></tr>`,
+              )
+              .join('') || '<tr><td colspan="5">Nessun giorno omologo disponibile.</td></tr>';
+          const values = (payload.recent || [])
+            .map((row) => row.max)
+            .filter((value) => typeof value === 'number');
+          if (values.length > 1) {
+            const low = Math.min(...values),
+              high = Math.max(...values);
+            const path = values
+              .map(
+                (value, index) =>
+                  `${(index / (values.length - 1)) * 600} ${130 - ((value - low) / Math.max(high - low, 1)) * 95}`,
+              )
+              .join(' L');
+            document.querySelector('#historySpark').setAttribute('d', `M${path}`);
+          }
+          document.querySelector('#historyStatus').textContent =
+            `${meta.attribution || 'Archivio storico'} · aggiornamento differito del provider.`;
+        } catch {
+          document.querySelector('#historyIntro').textContent =
+            'Dati storici temporaneamente non disponibili.';
         }
       };
       const loadLiveForecast = async () => {
@@ -1470,7 +1554,22 @@
       loadLiveForecast();
       loadLiveMarine();
       loadLiveMap();
+      loadHistory();
       document.querySelector('#mapTime').addEventListener('input', renderMap);
+      document.querySelector('#mapPlay').addEventListener('click', (event) => {
+        if (mapTimer) {
+          clearInterval(mapTimer);
+          mapTimer = undefined;
+          event.currentTarget.textContent = '▶ Avvia animazione';
+          return;
+        }
+        event.currentTarget.textContent = 'Ⅱ Pausa animazione';
+        mapTimer = setInterval(() => {
+          const slider = document.querySelector('#mapTime');
+          slider.value = String((Number(slider.value) + 1) % (Number(slider.max) + 1));
+          renderMap();
+        }, 1200);
+      });
       document.querySelectorAll('[data-map-layer]').forEach((button) =>
         button.addEventListener('click', () => {
           mapLayer = button.dataset.mapLayer;
