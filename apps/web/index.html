@@ -1056,15 +1056,13 @@
           </article>
           <article class="panel">
             <div class="panel-head">
-              <h2>Model battle</h2>
-              <small>accuratezza ultimi 30 giorni</small>
+              <h2>Model spread</h2>
+              <small>divergenza forecast · oggi</small>
             </div>
             <div class="score">
-              <p class="score-note">MAE temperatura, lead 0–24h</p>
-              <div class="meter"><i style="width: 66%"></i></div>
-              <p class="score-note">ECMWF · 1.2 °C · campioni verificati</p>
-              <div class="meter"><i style="width: 56%; background: var(--cyan)"></i></div>
-              <p class="score-note">ICON · 1.5 °C · campioni verificati</p>
+              <p class="score-note" id="modelBattleNote">Confronto dei modelli in caricamento…</p>
+              <div class="meter"><i id="modelSpreadMeter" style="width: 0%"></i></div>
+              <p class="score-note">Spread più basso = accordo maggiore. Non è una probabilità.</p>
             </div>
           </article>
         </section>
@@ -1138,6 +1136,20 @@
               <p id="forecastSource">Open‑Meteo · dati server-side</p>
             </article>
           </div>
+          <div class="detail-grid" id="forecastModelCards">
+            <article class="detail-card">
+              <h3>ECMWF IFS</h3>
+              <p>Caricamento forecast…</p>
+            </article>
+            <article class="detail-card">
+              <h3>DWD ICON</h3>
+              <p>Caricamento forecast…</p>
+            </article>
+            <article class="detail-card">
+              <h3>Météo-France</h3>
+              <p>Caricamento forecast…</p>
+            </article>
+          </div>
           <table class="data-table">
             <caption class="source-note">
               Prossime 12 ore · orario locale Europe/Rome
@@ -1152,6 +1164,25 @@
               </tr>
             </thead>
             <tbody id="forecastTable">
+              <tr>
+                <td colspan="5">Caricamento dati live…</td>
+              </tr>
+            </tbody>
+          </table>
+          <table class="data-table">
+            <caption class="source-note">
+              Prossimi 7 giorni · confronto multimodello
+            </caption>
+            <thead>
+              <tr>
+                <th>Giorno</th>
+                <th>ECMWF</th>
+                <th>ICON</th>
+                <th>Météo-France</th>
+                <th>Spread</th>
+              </tr>
+            </thead>
+            <tbody id="dailyForecastTable">
               <tr>
                 <td colspan="5">Caricamento dati live…</td>
               </tr>
@@ -1488,6 +1519,59 @@
             'Dati storici temporaneamente non disponibili.';
         }
       };
+      const loadForecastModels = async () => {
+        try {
+          const response = await fetch('/api/v1/locations/rimini/forecast-models', {
+            headers: { 'x-client-id': 'dashboard' },
+          });
+          if (!response.ok) throw new Error('models unavailable');
+          const payload = await response.json();
+          const validModels = payload.models || [];
+          document.querySelector('#forecastModelCards').innerHTML = validModels
+            .map((model) => {
+              const values = (model.hourly?.temperature_2m || [])
+                .slice(0, 24)
+                .filter((value) => typeof value === 'number');
+              const rain = (model.hourly?.precipitation || [])
+                .slice(0, 24)
+                .filter((value) => typeof value === 'number')
+                .reduce((sum, value) => sum + value, 0);
+              const max = values.length ? Math.max(...values) : null;
+              const min = values.length ? Math.min(...values) : null;
+              return `<article class="detail-card"><h3>${model.label}</h3><p><strong>${min !== null ? formatTemp(min) : '—'} → ${max !== null ? formatTemp(max) : '—'}</strong><br />pioggia 24h: ${rain.toFixed(1)} mm<br />risoluzione: ${model.resolution}</p></article>`;
+            })
+            .join('');
+          const days = validModels[0]?.daily?.time || [];
+          const todayMaxima = validModels
+            .map((model) => model.daily?.temperature_2m_max?.[0])
+            .filter((value) => typeof value === 'number');
+          if (todayMaxima.length > 1) {
+            const spread = Math.max(...todayMaxima) - Math.min(...todayMaxima);
+            document.querySelector('#modelBattleNote').textContent =
+              `Massime odierne: ${todayMaxima.map((value) => `${value}°`).join(' · ')} · spread ${spread.toFixed(1)}°`;
+            document.querySelector('#modelSpreadMeter').style.width =
+              `${Math.min(100, spread * 25)}%`;
+          }
+          document.querySelector('#dailyForecastTable').innerHTML = days
+            .map((date, index) => {
+              const values = validModels
+                .map((model) => model.daily?.temperature_2m_max?.[index])
+                .filter((value) => typeof value === 'number');
+              const spread = values.length > 1 ? Math.max(...values) - Math.min(...values) : null;
+              const cells = validModels
+                .map(
+                  (model) =>
+                    `<td>${model.daily?.temperature_2m_max?.[index] ?? '—'}° / ${model.daily?.precipitation_sum?.[index] ?? '—'} mm</td>`,
+                )
+                .join('');
+              return `<tr><td>${date}</td>${cells}<td>${spread !== null ? `${spread.toFixed(1)}°` : '—'}</td></tr>`;
+            })
+            .join('');
+        } catch {
+          document.querySelector('#dailyForecastTable').innerHTML =
+            '<tr><td colspan="5">Confronto modelli temporaneamente non disponibile.</td></tr>';
+        }
+      };
       const loadLiveForecast = async () => {
         try {
           const response = await fetch(
@@ -1555,6 +1639,7 @@
       loadLiveMarine();
       loadLiveMap();
       loadHistory();
+      loadForecastModels();
       document.querySelector('#mapTime').addEventListener('input', renderMap);
       document.querySelector('#mapPlay').addEventListener('click', (event) => {
         if (mapTimer) {
