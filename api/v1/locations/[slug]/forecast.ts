@@ -46,6 +46,10 @@ async function fetchLiveForecast(slug: string, model: string) {
     const url = new URL('https://api.open-meteo.com/v1/forecast');
     url.searchParams.set('latitude', String(point[0]));
     url.searchParams.set('longitude', String(point[1]));
+    url.searchParams.set(
+      'current',
+      'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,wind_speed_10m,wind_direction_10m,surface_pressure,visibility,uv_index',
+    );
     url.searchParams.set('hourly', 'temperature_2m,precipitation,wind_speed_10m');
     if (requestedModel) url.searchParams.set('models', requestedModel);
     url.searchParams.set('timezone', 'UTC');
@@ -59,6 +63,9 @@ async function fetchLiveForecast(slug: string, model: string) {
       body: { error: 'provider_unavailable', providerStatus: upstream.status },
     };
   let payload = (await upstream.json()) as {
+    current?: Record<string, unknown>;
+    current_units?: Record<string, string>;
+    timezone?: string;
     hourly?: Record<string, unknown[]>;
     model?: string;
   };
@@ -96,6 +103,9 @@ async function fetchLiveForecast(slug: string, model: string) {
     status: 200,
     body: {
       data,
+      current: payload.current ?? null,
+      currentUnits: payload.current_units ?? null,
+      timezone: payload.timezone ?? 'UTC',
       meta: {
         source: 'open-meteo',
         dataset: selectedModel,

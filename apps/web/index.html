@@ -561,6 +561,72 @@
           10px ui-monospace,
           monospace;
       }
+      .detail-page {
+        scroll-margin-top: 24px;
+        padding: 28px;
+      }
+      .detail-intro {
+        max-width: 720px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+      .detail-card {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+      .detail-card h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+      .detail-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .data-table {
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .data-table th,
+      .data-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+      }
+      .data-table th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .data-table td {
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+      .detail-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .detail-actions button {
+        width: auto;
+        padding: 10px 14px;
+      }
+      .source-note {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 11px;
+      }
       :focus-visible {
         outline: 2px solid var(--cyan);
         outline-offset: 3px;
@@ -631,6 +697,14 @@
           grid-template-columns: 1fr 1fr;
         }
       }
+      @media (max-width: 780px) {
+        .detail-page {
+          padding: 20px;
+        }
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+      }
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -667,9 +741,9 @@
         <div class="nav-label">Workspace</div>
         <nav class="nav">
           <button class="active" data-target="overview">Overview</button
-          ><button data-target="forecast">Forecast lab</button
-          ><button data-target="marine">Marine / SST</button
-          ><button data-target="history">Climate history</button
+          ><button data-target="forecast-detail">Forecast lab</button
+          ><button data-target="marine-detail">Marine / SST</button
+          ><button data-target="history-detail">Climate history</button
           ><button data-target="alerts">Allerte</button>
         </nav>
         <div class="nav-label">Tools</div>
@@ -703,7 +777,7 @@
         </header>
         <section class="page-head" id="overview">
           <div>
-            <div class="eyebrow">Martedì 25 agosto 2026 · 08:42 CET</div>
+            <div class="eyebrow" id="currentDate">Dati live · Rimini</div>
             <h1>Buongiorno, Rimini.</h1>
             <p>Una lettura compatta del cielo sopra la costa romagnola.</p>
           </div>
@@ -715,12 +789,14 @@
           <article class="panel hero">
             <div class="hero-copy">
               <div class="hero-location">Rimini centro · 44.06°N, 12.57°E</div>
-              <div class="hero-temp"><span data-temp="27">27</span><sup>°C</sup></div>
+              <div class="hero-temp">
+                <span id="currentTemp" data-temp="29.2">29.2</span><sup>°C</sup>
+              </div>
               <div class="hero-condition">Sereno con velature alte</div>
               <div class="hero-meta">
-                <span>Percepita <b>28°</b></span
-                ><span>Vento <b>NE 9 km/h</b></span
-                ><span>Umidità <b>61%</b></span>
+                <span>Percepita <b id="feelsLike">32.2°</b></span
+                ><span>Vento <b id="currentWind">NE 7.7 km/h</b></span
+                ><span>Umidità <b id="currentHumidity">59%</b></span>
               </div>
             </div>
             <div class="hero-footer"><span class="live-dot"></span>live observation</div>
@@ -734,11 +810,11 @@
               <div class="metric-row">
                 <div class="metric">
                   <div class="metric-label">Pressione</div>
-                  <div class="metric-value">1018 <em>hPa</em></div>
+                  <div class="metric-value" id="currentPressure">1008.8 <em>hPa</em></div>
                 </div>
                 <div class="metric">
                   <div class="metric-label">Visibilità</div>
-                  <div class="metric-value">18.4 <em>km</em></div>
+                  <div class="metric-value" id="currentVisibility">39.6 <em>km</em></div>
                 </div>
                 <div class="metric">
                   <div class="metric-label">Alba / tramonto</div>
@@ -746,7 +822,7 @@
                 </div>
                 <div class="metric">
                   <div class="metric-label">UV index</div>
-                  <div class="metric-value">6 <em>alto</em></div>
+                  <div class="metric-value" id="currentUv">1.2 <em>moderato</em></div>
                 </div>
               </div>
             </div>
@@ -792,7 +868,7 @@
                 "
               >
                 <caption style="text-align: left; padding-bottom: 6px">
-                  Tmax osservata per il 25 agosto
+                  Tmax osservata · serie storica
                 </caption>
                 <thead>
                   <tr>
@@ -949,6 +1025,118 @@
             <button class="quick" id="studioBtn">Apri configuratore →</button>
           </div>
         </section>
+        <section class="panel section detail-page" id="forecast-detail">
+          <div class="eyebrow">Approfondimento · previsione</div>
+          <h2>Forecast lab</h2>
+          <p class="detail-intro">
+            La previsione distingue sempre osservazione corrente, serie oraria e modello usato. Qui
+            puoi leggere i prossimi valori senza confonderli con la temperatura attuale.
+          </p>
+          <div class="detail-grid">
+            <article class="detail-card">
+              <h3>Ora corrente</h3>
+              <p id="forecastCurrentNote">Caricamento del dato osservato…</p>
+            </article>
+            <article class="detail-card">
+              <h3>Copertura</h3>
+              <p id="forecastCoverage">Serie oraria in caricamento…</p>
+            </article>
+            <article class="detail-card">
+              <h3>Provenienza</h3>
+              <p id="forecastSource">Open‑Meteo · dati server-side</p>
+            </article>
+          </div>
+          <table class="data-table">
+            <caption class="source-note">
+              Prossime 12 ore · orario locale Europe/Rome
+            </caption>
+            <thead>
+              <tr>
+                <th>Ora</th>
+                <th>Temperatura</th>
+                <th>Pioggia</th>
+                <th>Vento</th>
+                <th>Modello</th>
+              </tr>
+            </thead>
+            <tbody id="forecastTable">
+              <tr>
+                <td colspan="5">Caricamento dati live…</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+        <section class="panel section detail-page" id="marine-detail">
+          <div class="eyebrow">Approfondimento · costa</div>
+          <h2>Marine / SST</h2>
+          <p class="detail-intro">
+            Stato del mare per Rimini. La griglia marina è offshore: vicino alla costa i valori sono
+            indicativi.
+          </p>
+          <div class="detail-grid">
+            <article class="detail-card">
+              <h3>Temperatura mare</h3>
+              <p id="marineSstDetail">Caricamento…</p>
+            </article>
+            <article class="detail-card">
+              <h3>Onda</h3>
+              <p id="marineWaveDetail">Caricamento…</p>
+            </article>
+            <article class="detail-card">
+              <h3>Finestra balneare</h3>
+              <p id="marineScoreDetail">Calcolo in corso…</p>
+            </article>
+          </div>
+          <table class="data-table">
+            <caption class="source-note">
+              Prossime 8 ore · Open‑Meteo Marine
+            </caption>
+            <thead>
+              <tr>
+                <th>Ora</th>
+                <th>SST</th>
+                <th>Onda</th>
+                <th>Direzione</th>
+                <th>Periodo</th>
+              </tr>
+            </thead>
+            <tbody id="marineTable">
+              <tr>
+                <td colspan="5">Caricamento dati live…</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+        <section class="panel section detail-page" id="history-detail">
+          <div class="eyebrow">Approfondimento · clima</div>
+          <h2>Climate history</h2>
+          <p class="detail-intro">
+            Questa sezione è predisposta per confrontare osservazioni storiche, anomalie e giorni
+            omologhi. I valori demo non vengono più presentati come misure live.
+          </p>
+          <div class="detail-grid">
+            <article class="detail-card">
+              <h3>Dataset</h3>
+              <p>historical-weather · da collegare a storage persistente</p>
+            </article>
+            <article class="detail-card">
+              <h3>Metodo</h3>
+              <p>Aggregati mensili, baseline dichiarata e anomalia rispetto alla climatologia.</p>
+            </article>
+            <article class="detail-card">
+              <h3>Stato</h3>
+              <p>Interfaccia pronta; import storico da attivare con fonte e licenza approvate.</p>
+            </article>
+          </div>
+          <div class="detail-actions">
+            <button
+              class="quick"
+              data-toast="Lo storico sarà abilitato dopo l’import del dataset autorizzato."
+            >
+              Verifica disponibilità storico
+            </button>
+          </div>
+        </section>
         <div class="footer-note">
           ROMAGNA METEO LAB · UI INTEGRATA · dati da API server-side · provenance visibile nei
           payload
@@ -957,13 +1145,6 @@
     </div>
     <div id="toast" role="status" aria-live="polite"></div>
     <script type="module">
-      const hourlyData = [27, 28, 29, 30, 30, 31, 30, 29, 28, 27];
-      document.querySelector('#hourly').innerHTML = hourlyData
-        .map(
-          (temp, index) =>
-            `<div class="hour"><time>${index === 0 ? 'ora' : `${index + 8}:00`}</time><div class="weather-icon">${index % 3 === 2 ? '◒' : '☼'}</div><strong data-temp="${temp}">${temp}°</strong><div class="rain">${2 + index}%</div></div>`,
-        )
-        .join('');
       const toast = (message) => {
         const node = document.querySelector('#toast');
         node.textContent = message;
@@ -975,6 +1156,77 @@
           node.removeAttribute('style');
         }, 2600);
       };
+      const formatTemp = (value) => `${Math.round(value * 10) / 10}°`;
+      const formatTime = (value) =>
+        new Intl.DateTimeFormat('it-IT', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Europe/Rome',
+        }).format(new Date(value));
+      const direction = (degrees) => {
+        const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        return labels[Math.round(degrees / 45) % 8];
+      };
+      const byVariable = (data, variable) =>
+        new Map(
+          (data || [])
+            .filter((point) => point.variable === variable)
+            .map((point) => [point.validAt, point]),
+        );
+      const renderForecast = (payload) => {
+        const temperatures = (payload.data || [])
+          .filter((point) => point.variable === 'temperature_2m' && typeof point.value === 'number')
+          .slice(0, 12);
+        const rain = byVariable(payload.data, 'precipitation');
+        const wind = byVariable(payload.data, 'wind_speed_10m');
+        document.querySelector('#hourly').innerHTML = temperatures
+          .map((point, index) => {
+            const temp = Number(point.value);
+            const rainValue = rain.get(point.validAt)?.value;
+            return `<div class="hour"><time>${index === 0 ? 'ora' : formatTime(point.validAt)}</time><div class="weather-icon">${index % 3 === 2 ? '◒' : '☼'}</div><strong data-temp="${temp}">${formatTemp(temp)}</strong><div class="rain">${typeof rainValue === 'number' ? `${Math.round(rainValue * 10) / 10} mm` : '—'}</div></div>`;
+          })
+          .join('');
+        document.querySelector('#forecastTable').innerHTML = temperatures
+          .map((point) => {
+            const rainValue = rain.get(point.validAt)?.value;
+            const windValue = wind.get(point.validAt)?.value;
+            return `<tr><td>${formatTime(point.validAt)}</td><td>${formatTemp(point.value)}</td><td>${typeof rainValue === 'number' ? `${rainValue} mm` : '—'}</td><td>${typeof windValue === 'number' ? `${windValue} km/h` : '—'}</td><td>${point.model || payload.meta?.dataset || '—'}</td></tr>`;
+          })
+          .join('');
+        document.querySelector('#forecastCoverage').textContent =
+          `${temperatures.length} ore disponibili · dataset ${payload.meta?.dataset || 'non dichiarato'}`;
+        document.querySelector('#forecastSource').textContent =
+          `${payload.meta?.source || 'provider'} · aggiornato ${formatTime(payload.meta?.retrievedAt || new Date())}`;
+      };
+      const renderCurrent = (current) => {
+        if (!current || typeof current.temperature_2m !== 'number') return;
+        const temp = current.temperature_2m;
+        document.querySelector('#currentDate').textContent =
+          `${new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Rome' }).format(new Date(current.time))} · ${formatTime(current.time)} CET`;
+        document.querySelector('#currentTemp').dataset.temp = String(temp);
+        document.querySelector('#currentTemp').textContent = formatTemp(temp);
+        if (typeof current.apparent_temperature === 'number')
+          document.querySelector('#feelsLike').textContent = formatTemp(
+            current.apparent_temperature,
+          );
+        if (typeof current.wind_speed_10m === 'number')
+          document.querySelector('#currentWind').textContent =
+            `${direction(Number(current.wind_direction_10m || 0))} ${current.wind_speed_10m} km/h`;
+        if (typeof current.relative_humidity_2m === 'number')
+          document.querySelector('#currentHumidity').textContent =
+            `${current.relative_humidity_2m}%`;
+        if (typeof current.surface_pressure === 'number')
+          document.querySelector('#currentPressure').innerHTML =
+            `${current.surface_pressure} <em>hPa</em>`;
+        if (typeof current.visibility === 'number')
+          document.querySelector('#currentVisibility').innerHTML =
+            `${(current.visibility / 1000).toFixed(1)} <em>km</em>`;
+        if (typeof current.uv_index === 'number')
+          document.querySelector('#currentUv').innerHTML =
+            `${Math.round(current.uv_index * 10) / 10} <em>${current.uv_index >= 6 ? 'alto' : current.uv_index >= 3 ? 'moderato' : 'basso'}</em>`;
+        document.querySelector('#forecastCurrentNote').textContent =
+          `Ora: ${formatTime(current.time)} · ${formatTemp(temp)} · percepita ${formatTemp(current.apparent_temperature ?? temp)}`;
+      };
       const loadLiveForecast = async () => {
         try {
           const response = await fetch(
@@ -983,16 +1235,57 @@
           );
           if (!response.ok) throw new Error('forecast unavailable');
           const payload = await response.json();
-          const live = payload.data?.find((point) => point.value != null)?.value;
-          if (typeof live === 'number')
-            document.querySelector('.hero-temp [data-temp]').textContent = `${Math.round(live)}°`;
+          renderCurrent(payload.current);
+          renderForecast(payload);
           document.querySelector('.hero-footer').innerHTML =
             '<span class="live-dot"></span> live provider data';
         } catch {
           toast('Dati live non disponibili: visualizzo l’ultimo quadro locale.');
         }
       };
+      const loadLiveMarine = async () => {
+        try {
+          const response = await fetch('/api/v1/locations/rimini/marine?grid=sea', {
+            headers: { 'x-client-id': 'dashboard' },
+          });
+          if (!response.ok) throw new Error('marine unavailable');
+          const payload = await response.json();
+          const get = (variable) =>
+            (payload.data || []).find(
+              (point) => point.variable === variable && typeof point.value === 'number',
+            );
+          const sst = get('sea_surface_temperature');
+          const wave = get('wave_height');
+          const directionPoint = get('wave_direction');
+          const period = get('wave_period');
+          document.querySelector('#marineSstDetail').textContent = sst
+            ? `${sst.value} °C · dato live`
+            : 'non disponibile';
+          document.querySelector('#marineWaveDetail').textContent = wave
+            ? `${wave.value} m · ${directionPoint ? `${directionPoint.value}°` : 'direzione n/d'} · ${period ? `${period.value} s` : 'periodo n/d'}`
+            : 'non disponibile';
+          document.querySelector('#marineScoreDetail').textContent = wave
+            ? `onda contenuta · ${Math.max(0, Math.round(100 - wave.value * 45))}/100 indicativo`
+            : 'non calcolabile';
+          const groups = new Map();
+          (payload.data || []).forEach((point) => {
+            if (!groups.has(point.validAt)) groups.set(point.validAt, {});
+            groups.get(point.validAt)[point.variable] = point.value;
+          });
+          document.querySelector('#marineTable').innerHTML = [...groups.entries()]
+            .slice(0, 8)
+            .map(
+              ([time, values]) =>
+                `<tr><td>${formatTime(time)}</td><td>${values.sea_surface_temperature ?? '—'} °C</td><td>${values.wave_height ?? '—'} m</td><td>${values.wave_direction ?? '—'}°</td><td>${values.wave_period ?? '—'} s</td></tr>`,
+            )
+            .join('');
+        } catch {
+          document.querySelector('#marineTable').innerHTML =
+            '<tr><td colspan="5">Dati marine temporaneamente non disponibili.</td></tr>';
+        }
+      };
       loadLiveForecast();
+      loadLiveMarine();
       document
         .querySelectorAll('[data-toast]')
         .forEach((button) => button.addEventListener('click', () => toast(button.dataset.toast)));
@@ -1013,7 +1306,7 @@
         document.querySelectorAll('[data-temp]').forEach((node) => {
           const c = Number(node.dataset.temp);
           node.textContent =
-            event.target.value === 'f' ? `${Math.round((c * 9) / 5 + 32)}°` : `${c}°`;
+            event.target.value === 'f' ? `${Math.round((c * 9) / 5 + 32)}°` : formatTemp(c);
         });
       });
       const sidebar = document.querySelector('#sidebar');
