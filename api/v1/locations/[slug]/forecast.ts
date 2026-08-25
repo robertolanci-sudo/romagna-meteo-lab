@@ -1,5 +1,3 @@
-import { fetchForecast } from '../../../_lib/weather.js';
-
 type VercelRequest = {
   method?: string;
   url?: string;
@@ -23,7 +21,7 @@ export default async function handler(
   const slug = url.pathname.split('/').filter(Boolean).at(-2) ?? '';
   try {
     const model = url.searchParams.get('models') ?? 'ecmwf_ifs04';
-    const result = await fetchForecast(slug, model);
+    const result = await fetchLiveForecast(slug, model);
     response.status(result.status).setHeader('content-type', 'application/json; charset=utf-8');
     response.send(JSON.stringify(result.body));
   } catch (error) {
@@ -34,4 +32,57 @@ export default async function handler(
       }),
     );
   }
+}
+
+async function fetchLiveForecast(slug: string, model: string) {
+  const coordinates: Record<string, [number, number]> = {
+    rimini: [44.0594, 12.5683],
+    riccione: [43.9996, 12.6561],
+    cattolica: [43.9618, 12.7363],
+  };
+  const point = coordinates[slug];
+  if (!point) return { status: 404, body: { error: 'location_not_found' } };
+  const url = new URL('https://api.open-meteo.com/v1/forecast');
+  url.searchParams.set('latitude', String(point[0]));
+  url.searchParams.set('longitude', String(point[1]));
+  url.searchParams.set('hourly', 'temperature_2m,precipitation,wind_speed_10m');
+  url.searchParams.set('models', model);
+  url.searchParams.set('timezone', 'UTC');
+  const upstream = await fetch(url);
+  if (!upstream.ok)
+    return {
+      status: 502,
+      body: { error: 'provider_unavailable', providerStatus: upstream.status },
+    };
+  const payload = (await upstream.json()) as { hourly?: Record<string, unknown[]> };
+  const hourly = payload.hourly;
+  const times = Array.isArray(hourly?.time) ? (hourly.time as string[]) : [];
+  if (!times.length) return { status: 502, body: { error: 'malformed_provider_payload' } };
+  const variables = [
+    ['temperature_2m', '°C'],
+    ['precipitation', 'mm'],
+    ['wind_speed_10m', 'km/h'],
+  ] as const;
+  const data = variables.flatMap(([variable, unit]) =>
+    (Array.isArray(hourly?.[variable]) ? hourly[variable] : []).map((value, index) => ({
+      validAt: `${times[index]}:00Z`,
+      leadHours: index,
+      variable,
+      value: typeof value === 'number' ? value : null,
+      unit,
+      model,
+    })),
+  );
+  return {
+    status: 200,
+    body: {
+      data,
+      meta: {
+        source: 'open-meteo',
+        dataset: model,
+        retrievedAt: new Date().toISOString(),
+        attribution: 'Weather data by Open-Meteo.com',
+      },
+    },
+  };
 }
