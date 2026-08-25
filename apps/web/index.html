@@ -1541,10 +1541,10 @@
                   }),
                 }).bindTooltip(`${wind} km/h · ${point.windDirection?.[index] ?? '—'}°`)
               : L.circleMarker([point.latitude, point.longitude], {
-                  radius: 24,
+                  radius: 13,
                   color: mapColor(precipitation),
                   fillColor: mapColor(precipitation),
-                  fillOpacity: Math.max(0.2, Math.min(0.8, 0.2 + precipitation / 8)),
+                  fillOpacity: Math.max(0.18, Math.min(0.58, 0.18 + precipitation / 12)),
                   weight: 1,
                 }).bindTooltip(`${precipitation} mm/h`);
           marker.addTo(leafletMap);
