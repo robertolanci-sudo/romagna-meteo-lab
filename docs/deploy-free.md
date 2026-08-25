@@ -36,3 +36,9 @@ pnpm build
 
 Il deploy di produzione resta un gate operativo: richiede login Vercel,
 selezione del progetto, environment variables e verifica del dominio.
+
+Le funzioni Vercel pubblicate dal repository sono:
+
+- `/api/health`;
+- `/api/v1/locations/:slug/forecast`;
+- `/api/v1/locations/:slug/marine`.

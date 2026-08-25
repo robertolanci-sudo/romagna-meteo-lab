@@ -41,4 +41,5 @@ Updated by the Codex orchestrator or a human reviewer.
 - 2026-08-25 — T025 done; skip link, focus states, table fallback, security headers, performance targets and audit command documented.
 - 2026-08-25 — T025 security evidence complete; Vitest 3.2.7/Vite 6.4.3 pinned and npm audit reports no known vulnerabilities.
 - 2026-08-25 — T026 ready; release candidate checklist complete, deployment intentionally not executed without Vercel project/account configuration.
+- 2026-08-25 — live Vercel API wiring; health, forecast and marine serverless routes added; dashboard now attempts server-side forecast data with demo fallback.
 - 2026-08-25T14:37:55.553Z — human gate pending: T026

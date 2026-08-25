@@ -8,6 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@romagna-meteo/api':
+        specifier: workspace:*
+        version: link:apps/api
+      '@romagna-meteo/domain':
+        specifier: workspace:*
+        version: link:packages/domain
+      '@romagna-meteo/jobs':
+        specifier: workspace:*
+        version: link:packages/jobs
+      '@romagna-meteo/providers':
+        specifier: workspace:*
+        version: link:packages/providers
       zod:
         specifier: ^3.24.1
         version: 3.25.76

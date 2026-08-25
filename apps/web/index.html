@@ -975,6 +975,24 @@
           node.removeAttribute('style');
         }, 2600);
       };
+      const loadLiveForecast = async () => {
+        try {
+          const response = await fetch(
+            '/api/v1/locations/rimini/forecast?variables=temperature_2m',
+            { headers: { 'x-client-id': 'dashboard' } },
+          );
+          if (!response.ok) throw new Error('forecast unavailable');
+          const payload = await response.json();
+          const live = payload.data?.find((point) => point.value != null)?.value;
+          if (typeof live === 'number')
+            document.querySelector('.hero-temp [data-temp]').textContent = `${Math.round(live)}°`;
+          document.querySelector('.hero-footer').innerHTML =
+            '<span class="live-dot"></span> live provider data';
+        } catch {
+          toast('Dati live non disponibili: visualizzo l’ultimo quadro locale.');
+        }
+      };
+      loadLiveForecast();
       document
         .querySelectorAll('[data-toast]')
         .forEach((button) => button.addEventListener('click', () => toast(button.dataset.toast)));
@@ -983,9 +1001,10 @@
         .addEventListener('click', () =>
           toast('Configuratore pronto per il collegamento a POST /v1/widgets/preview.'),
         );
-      document
-        .querySelector('#refreshBtn')
-        .addEventListener('click', () => toast('Richiesta refresh inviata al layer API.'));
+      document.querySelector('#refreshBtn').addEventListener('click', () => {
+        toast('Aggiorno i dati dal layer API.');
+        loadLiveForecast();
+      });
       document.querySelector('#searchInput').addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && event.target.value.trim())
           toast(`Ricerca: “${event.target.value.trim()}”`);
