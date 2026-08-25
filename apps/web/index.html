@@ -694,11 +694,12 @@
         border-radius: 14px;
         background: #0d1830;
       }
-      .map-canvas svg {
+      .map-canvas > svg {
         display: block;
         width: 100%;
         min-height: 360px;
       }
+      .leaflet-pane svg { width: auto; min-height: 0; }
       #leafletMap {
         height: 460px;
         width: 100%;
@@ -1652,10 +1653,14 @@
                 .filter((value) => typeof value === 'number');
               const spread = values.length > 1 ? Math.max(...values) - Math.min(...values) : null;
               const cells = validModels
-                .map(
-                  (model) =>
-                    `<td>${model.daily?.temperature_2m_max?.[index] ?? '—'}° / ${model.daily?.precipitation_sum?.[index] ?? '—'} mm</td>`,
-                )
+                .map((model) => {
+                  const temperature = model.daily?.temperature_2m_max?.[index];
+                  const icon = weatherGlyph(
+                    Number(model.daily?.weather_code?.[index] ?? 0),
+                    Number(temperature ?? 0),
+                  );
+                  return `<td><span class="weather-icon ${icon.type}" style="display:inline-grid;width:28px;height:28px;vertical-align:middle"><span>${icon.glyph}</span></span>${temperature ?? '—'}° / ${model.daily?.precipitation_sum?.[index] ?? '—'} mm</td>`;
+                })
                 .join('');
               return `<tr><td>${date}</td>${cells}<td>${spread !== null ? `${spread.toFixed(1)}°` : '—'}</td></tr>`;
             })
