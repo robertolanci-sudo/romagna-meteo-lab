@@ -627,6 +627,67 @@
         color: var(--muted);
         font-size: 11px;
       }
+      .map-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .map-toolbar button,
+      .map-toolbar input {
+        accent-color: var(--cyan);
+      }
+      .map-toolbar button {
+        width: auto;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+      }
+      .map-toolbar button.active {
+        border-color: var(--cyan);
+        color: var(--cyan);
+      }
+      .map-canvas {
+        position: relative;
+        margin-top: 18px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #0d1830;
+      }
+      .map-canvas svg {
+        display: block;
+        width: 100%;
+        min-height: 360px;
+      }
+      .map-label {
+        fill: rgba(238, 241, 255, 0.7);
+        font:
+          11px ui-monospace,
+          monospace;
+      }
+      .map-water {
+        fill: #10213c;
+        stroke: rgba(172, 184, 255, 0.2);
+        stroke-width: 1;
+      }
+      .map-grid-line {
+        stroke: rgba(172, 184, 255, 0.1);
+        stroke-width: 1;
+      }
+      .map-point {
+        stroke: rgba(255, 255, 255, 0.55);
+        stroke-width: 1;
+      }
+      .wind-arrow {
+        stroke: #eef1ff;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        opacity: 0.9;
+      }
       :focus-visible {
         outline: 2px solid var(--cyan);
         outline-offset: 3px;
@@ -743,6 +804,7 @@
           <button class="active" data-target="overview">Overview</button
           ><button data-target="forecast-detail">Forecast lab</button
           ><button data-target="marine-detail">Marine / SST</button
+          ><button data-target="map-room">Map room</button
           ><button data-target="history-detail">Climate history</button
           ><button data-target="alerts">Allerte</button>
         </nav>
@@ -1069,6 +1131,35 @@
             </tbody>
           </table>
         </section>
+        <section class="panel section detail-page" id="map-room">
+          <div class="eyebrow">Approfondimento · nowcasting</div>
+          <h2>Map room</h2>
+          <p class="detail-intro">
+            Griglia live sulla Romagna. Scegli precipitazioni o vento e sposta il cursore sulle
+            prossime 24 ore.
+          </p>
+          <div class="map-toolbar" role="group" aria-label="Controlli mappa meteo">
+            <button class="active" data-map-layer="precipitation">Precipitazioni</button>
+            <button data-map-layer="wind">Vento</button>
+            <label
+              >Ora <input id="mapTime" type="range" min="0" max="23" value="0" step="1"
+            /></label>
+            <strong id="mapTimeLabel">Caricamento…</strong>
+          </div>
+          <div
+            class="map-canvas"
+            id="mapCanvas"
+            role="img"
+            aria-label="Mappa live di precipitazioni e vento sulla Romagna"
+          >
+            <svg viewBox="0 0 800 420" preserveAspectRatio="none">
+              <text class="map-label" x="24" y="34">Caricamento griglia meteo…</text>
+            </svg>
+          </div>
+          <p class="source-note" id="mapSource">
+            Fonte: Open‑Meteo · griglia indicativa, aggiornamento automatico.
+          </p>
+        </section>
         <section class="panel section detail-page" id="marine-detail">
           <div class="eyebrow">Approfondimento · costa</div>
           <h2>Marine / SST</h2>
@@ -1247,6 +1338,72 @@
         document.querySelector('#forecastCurrentNote').textContent =
           `Ora: ${formatTime(current.time)} · ${formatTemp(temp)} · percepita ${formatTemp(current.apparent_temperature ?? temp)}`;
       };
+      let mapPayload;
+      let mapLayer = 'precipitation';
+      const mapColor = (value) => {
+        if (mapLayer === 'wind')
+          return `hsl(${Math.max(185, 220 - Math.min(value, 60) * 1.2)} 78% ${Math.max(42, 72 - Math.min(value, 60) * 0.4)}%)`;
+        const intensity = Math.min(Number(value || 0) / 8, 1);
+        return `hsl(${Math.max(190, 210 - intensity * 170)} 82% ${Math.max(36, 72 - intensity * 28)}%)`;
+      };
+      const renderMap = () => {
+        if (!mapPayload) return;
+        const index = Number(document.querySelector('#mapTime').value);
+        const minLat = 43.75,
+          maxLat = 44.35,
+          minLon = 11.95,
+          maxLon = 13.07;
+        const x = (lon) => ((lon - minLon) / (maxLon - minLon)) * 800;
+        const y = (lat) => 420 - ((lat - minLat) / (maxLat - minLat)) * 420;
+        const pointAt = (point) =>
+          mapLayer === 'wind' ? point.windSpeed?.[index] : point.precipitation?.[index];
+        const time = mapPayload.times[index];
+        const cells = mapPayload.points
+          .map((point) => {
+            const value = Number(pointAt(point) ?? 0);
+            const px = x(point.longitude),
+              py = y(point.latitude);
+            const arrow =
+              mapLayer === 'wind'
+                ? `<line class="wind-arrow" x1="${px}" y1="${py}" x2="${px + Math.cos((((point.windDirection?.[index] ?? 0) - 90) * Math.PI) / 180) * 18}" y2="${py + Math.sin((((point.windDirection?.[index] ?? 0) - 90) * Math.PI) / 180) * 18}" />`
+                : '';
+            return `<circle class="map-point" cx="${px}" cy="${py}" r="${mapLayer === 'wind' ? 7 : 13}" fill="${mapColor(value)}" fill-opacity="${mapLayer === 'wind' ? 0.9 : Math.max(0.35, Math.min(0.95, 0.35 + value / 8))}" />${arrow}`;
+          })
+          .join('');
+        const gridLines =
+          [0, 1, 2, 3, 4, 5]
+            .map(
+              (i) => `<line class="map-grid-line" x1="0" y1="${i * 84}" x2="800" y2="${i * 84}" />`,
+            )
+            .join('') +
+          [0, 1, 2, 3, 4, 5, 6, 7]
+            .map(
+              (i) =>
+                `<line class="map-grid-line" x1="${i * 114.3}" y1="0" x2="${i * 114.3}" y2="420" />`,
+            )
+            .join('');
+        document.querySelector('#mapCanvas svg').innerHTML =
+          `<rect class="map-water" x="0" y="0" width="800" height="420" rx="12" />${gridLines}${cells}<text class="map-label" x="18" y="398">Romagna · ${mapLayer === 'wind' ? 'vento km/h' : 'precipitazione mm/h'}</text><text class="map-label" x="650" y="28">${mapPayload.meta?.dataset || 'best_match'}</text>`;
+        document.querySelector('#mapTimeLabel').textContent = time ? formatTime(time) : '—';
+      };
+      const loadLiveMap = async () => {
+        try {
+          const response = await fetch('/api/v1/map?hours=24', {
+            headers: { 'x-client-id': 'dashboard' },
+          });
+          if (!response.ok) throw new Error('map unavailable');
+          mapPayload = await response.json();
+          document.querySelector('#mapTime').max = String(
+            Math.max(0, (mapPayload.times?.length || 1) - 1),
+          );
+          document.querySelector('#mapSource').textContent =
+            `Fonte: ${mapPayload.meta?.source || 'provider'} · ${mapPayload.points?.length || 0} punti · ${mapPayload.meta?.hours || 24} ore · ${mapPayload.meta?.attribution || ''}`;
+          renderMap();
+        } catch {
+          document.querySelector('#mapSource').textContent =
+            'Mappa non disponibile: il provider non ha risposto.';
+        }
+      };
       const loadLiveForecast = async () => {
         try {
           const response = await fetch(
@@ -1312,6 +1469,17 @@
       };
       loadLiveForecast();
       loadLiveMarine();
+      loadLiveMap();
+      document.querySelector('#mapTime').addEventListener('input', renderMap);
+      document.querySelectorAll('[data-map-layer]').forEach((button) =>
+        button.addEventListener('click', () => {
+          mapLayer = button.dataset.mapLayer;
+          document
+            .querySelectorAll('[data-map-layer]')
+            .forEach((item) => item.classList.toggle('active', item === button));
+          renderMap();
+        }),
+      );
       document
         .querySelectorAll('[data-toast]')
         .forEach((button) => button.addEventListener('click', () => toast(button.dataset.toast)));
