@@ -1681,11 +1681,9 @@
             (payload.anniversary || [])
               .map(
                 (row) =>
-                 `<tr><td>${row.date}</td><td>${row.max ?? '—'} °C</td><td>${row.min ?? '—'} °C</td><td>${row.mean ?? '—'} °C</td><td>${row.precipitation ?? '—'} mm</td></tr>`,
                   `<tr><td>${row.date}${row.source?.includes('provvisorio') ? ' · oggi' : ''}</td><td>${row.max ?? '—'} °C</td><td>${row.min ?? '—'} °C</td><td>${row.mean ?? '—'} °C</td><td>${row.precipitation ?? '—'} mm</td><td>${row.source ?? '—'}</td></tr>`,
               )
-           .join('') || '<tr><td colspan="5">Nessun giorno omologo disponibile.</td></tr>';
-            .join('') || '<tr><td colspan="6">Nessun giorno omologo disponibile.</td></tr>';
+              .join('') || '<tr><td colspan="6">Nessun giorno omologo disponibile.</td></tr>';
           const values = (payload.recent || [])
             .map((row) => row.max)
             .filter((value) => typeof value === 'number');
@@ -1734,14 +1732,38 @@
           const days = validModels[0]?.daily?.time || [];
           document.querySelector('#forecast14Strip').innerHTML = days
             .map((date, index) => {
-              const means = validModels.map((model) => model.daily?.temperature_2m_mean?.[index]).filter((value) => typeof value === 'number');
-              const maxima = validModels.map((model) => model.daily?.temperature_2m_max?.[index]).filter((value) => typeof value === 'number');
-              const rain = validModels.map((model) => model.daily?.precipitation_sum?.[index]).filter((value) => typeof value === 'number');
-              const mean = means.length ? means.reduce((sum, value) => sum + value, 0) / means.length : null;
-              const maximum = maxima.length ? maxima.reduce((sum, value) => sum + value, 0) / maxima.length : null;
-              const precipitation = rain.length ? rain.reduce((sum, value) => sum + value, 0) / rain.length : null;
-              const icon = weatherGlyph(Number(validModels.find((model) => typeof model.daily?.weather_code?.[index] === 'number')?.daily?.weather_code?.[index] ?? 0), Number(maximum ?? 0));
-              const day = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Rome' }).format(new Date(`${date}T12:00:00Z`));
+              const means = validModels
+                .map((model) => model.daily?.temperature_2m_mean?.[index])
+                .filter((value) => typeof value === 'number');
+              const maxima = validModels
+                .map((model) => model.daily?.temperature_2m_max?.[index])
+                .filter((value) => typeof value === 'number');
+              const rain = validModels
+                .map((model) => model.daily?.precipitation_sum?.[index])
+                .filter((value) => typeof value === 'number');
+              const mean = means.length
+                ? means.reduce((sum, value) => sum + value, 0) / means.length
+                : null;
+              const maximum = maxima.length
+                ? maxima.reduce((sum, value) => sum + value, 0) / maxima.length
+                : null;
+              const precipitation = rain.length
+                ? rain.reduce((sum, value) => sum + value, 0) / rain.length
+                : null;
+              const icon = weatherGlyph(
+                Number(
+                  validModels.find(
+                    (model) => typeof model.daily?.weather_code?.[index] === 'number',
+                  )?.daily?.weather_code?.[index] ?? 0,
+                ),
+                Number(maximum ?? 0),
+              );
+              const day = new Intl.DateTimeFormat('it-IT', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                timeZone: 'Europe/Rome',
+              }).format(new Date(`${date}T12:00:00Z`));
               return `<article class="daily-card"><time>${day}</time><div class="weather-icon ${icon.type}" title="${condition(Number(validModels[0]?.daily?.weather_code?.[index] ?? 0))}"><span>${icon.glyph}</span></div><strong class="daily-mean">${mean !== null ? formatTemp(mean) : '—'}</strong><span class="daily-max">max ${maximum !== null ? formatTemp(maximum) : '—'}</span><span class="daily-rain">${precipitation !== null ? `${precipitation.toFixed(1)} mm` : '—'}</span></article>`;
             })
             .join('');
