@@ -95,7 +95,8 @@ export default async function handler(request: VercelRequest, response: VercelRe
         : null,
       precipitation: Number(values.precipitation.toFixed(1)),
     }));
-    const targetMonthDay = dates.at(-1)?.slice(5);
+    const targetDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(today);
+    const targetMonthDay = targetDate.slice(5);
     const anniversary = dates.flatMap((date, index) =>
       date.slice(5) === targetMonthDay && valid(max[index])
         ? [
@@ -105,10 +106,42 @@ export default async function handler(request: VercelRequest, response: VercelRe
               min: valid(min[index]) ? min[index] : null,
               mean: valid(mean[index]) ? mean[index] : null,
               precipitation: valid(rain[index]) ? rain[index] : null,
+              source: 'ERA5-Land',
             },
           ]
         : [],
     );
+    try {
+      const forecastUrl = new URL('https://api.open-meteo.com/v1/forecast');
+      forecastUrl.searchParams.set('latitude', String(point[0]));
+      forecastUrl.searchParams.set('longitude', String(point[1]));
+      forecastUrl.searchParams.set(
+        'daily',
+        'temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum',
+      );
+      forecastUrl.searchParams.set('forecast_days', '1');
+      forecastUrl.searchParams.set('timezone', 'Europe/Rome');
+      const forecastResponse = await fetch(forecastUrl);
+      if (forecastResponse.ok) {
+        const forecast = (await forecastResponse.json()) as DailyPayload;
+        const forecastDaily = forecast.daily;
+        if (
+          forecastDaily?.time?.[0] === targetDate &&
+          valid(forecastDaily.temperature_2m_max?.[0])
+        ) {
+          anniversary.unshift({
+            date: targetDate,
+            max: forecastDaily.temperature_2m_max?.[0] ?? null,
+            min: forecastDaily.temperature_2m_min?.[0] ?? null,
+            mean: forecastDaily.temperature_2m_mean?.[0] ?? null,
+            precipitation: forecastDaily.precipitation_sum?.[0] ?? null,
+            source: 'forecast · provvisorio',
+          });
+        }
+      }
+    } catch {
+      // Keep the ERA5-Land years available if the provisional live value fails.
+    }
     const recent = dates.slice(-30).map((date, offset) => {
       const index = dates.length - 30 + offset;
       return {
@@ -128,6 +161,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
         meta: {
           source: 'open-meteo-archive',
           dataset: 'ERA5-Land',
+          targetDate,
           startDate: dates[0],
           endDate: dates.at(-1),
           attribution: 'Historical weather by Open-Meteo.com · ERA5-Land / Copernicus C3S',
@@ -135,13 +169,11 @@ export default async function handler(request: VercelRequest, response: VercelRe
       }),
     );
   } catch (error) {
-    response
-      .status(502)
-      .send(
-        JSON.stringify({
-          error: 'provider_unavailable',
-          detail: error instanceof Error ? error.message : 'unknown',
-        }),
-      );
+    response.status(502).send(
+      JSON.stringify({
+        error: 'provider_unavailable',
+        detail: error instanceof Error ? error.message : 'unknown',
+      }),
+    );
   }
 }

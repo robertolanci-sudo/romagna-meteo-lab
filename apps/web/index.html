@@ -1398,7 +1398,7 @@
           </div>
           <table class="data-table">
             <caption class="source-note">
-              Giorno omologo più recente disponibile · Tmax
+              Oggi e stesso giorno degli anni precedenti · Tmax
             </caption>
             <thead>
               <tr>
@@ -1407,11 +1407,12 @@
                 <th>Tmin</th>
                 <th>Media</th>
                 <th>Pioggia</th>
+                <th>Fonte</th>
               </tr>
             </thead>
             <tbody id="historyTable">
               <tr>
-                <td colspan="5">Caricamento dati storici…</td>
+                <td colspan="6">Caricamento dati storici…</td>
               </tr>
             </tbody>
           </table>
@@ -1646,9 +1647,11 @@
             (payload.anniversary || [])
               .map(
                 (row) =>
-                  `<tr><td>${row.date}</td><td>${row.max ?? '—'} °C</td><td>${row.min ?? '—'} °C</td><td>${row.mean ?? '—'} °C</td><td>${row.precipitation ?? '—'} mm</td></tr>`,
+                 `<tr><td>${row.date}</td><td>${row.max ?? '—'} °C</td><td>${row.min ?? '—'} °C</td><td>${row.mean ?? '—'} °C</td><td>${row.precipitation ?? '—'} mm</td></tr>`,
+                  `<tr><td>${row.date}${row.source?.includes('provvisorio') ? ' · oggi' : ''}</td><td>${row.max ?? '—'} °C</td><td>${row.min ?? '—'} °C</td><td>${row.mean ?? '—'} °C</td><td>${row.precipitation ?? '—'} mm</td><td>${row.source ?? '—'}</td></tr>`,
               )
-              .join('') || '<tr><td colspan="5">Nessun giorno omologo disponibile.</td></tr>';
+           .join('') || '<tr><td colspan="5">Nessun giorno omologo disponibile.</td></tr>';
+            .join('') || '<tr><td colspan="6">Nessun giorno omologo disponibile.</td></tr>';
           const values = (payload.recent || [])
             .map((row) => row.max)
             .filter((value) => typeof value === 'number');
