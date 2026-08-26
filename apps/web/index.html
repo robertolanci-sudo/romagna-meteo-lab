@@ -475,6 +475,19 @@
         color: var(--cyan);
         font-size: 11px;
       }
+      .chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 18px;
+        padding: 0 18px 16px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+      .legend-swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--violet); }
+      .legend-swatch.hot { background: #ff392f; box-shadow: 0 0 8px rgba(255,57,47,.75); }
+      .legend-swatch.rain { background: #53b9ef; }
+      .legend-swatch.wind { background: #eef1ff; }
       .stat-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -1012,10 +1025,20 @@
                 role="img"
                 aria-label="Grafico temperatura"
               >
+                <title>Andamento temperatura forecast nelle prossime 48 ore</title>
+                <desc>
+                  Linea della temperatura prevista; i valori esatti sono disponibili nella tabella
+                  sottostante.
+                </desc>
                 <path
                   d="M0 110 C50 100 75 85 120 92 S185 40 235 55 S300 95 350 72 S410 42 460 63 S530 30 600 38"
                 />
               </svg>
+            </div>
+            <div class="chart-legend" id="forecastLegend" aria-live="polite">
+              <span class="legend-item"><i class="legend-swatch"></i>temperatura prevista</span>
+              <span class="legend-item"><i class="legend-swatch hot"></i>oltre 30 °C</span>
+              <span class="legend-item"><i class="legend-swatch rain"></i>pioggia in mm</span>
             </div>
             <details style="padding: 0 18px 18px">
               <summary style="color: var(--cyan); cursor: pointer; font-size: 11px">
@@ -1124,8 +1147,21 @@
                 preserveAspectRatio="none"
                 aria-label="Grafico storico"
               >
+                <title>Andamento storico della temperatura massima</title>
+                <desc>
+                  Linea della temperatura massima recente; i valori dettagliati sono nella sezione
+                  Climate history.
+                </desc>
                 <path id="historySpark" d="M0 100 L120 66 L240 84 L360 45 L480 73 L600 53" />
               </svg>
+            </div>
+            <div class="chart-legend" aria-live="polite">
+              <span class="legend-item"
+                ><i class="legend-swatch"></i>Tmax giornaliera ERA5‑Land</span
+              >
+              <span class="legend-item"
+                ><i class="legend-swatch rain"></i>archivio aggiornato con ritardo</span
+              >
             </div>
           </article>
           <article class="panel">
@@ -1278,6 +1314,14 @@
               >Ora <input id="mapTime" type="range" min="0" max="23" value="0" step="1"
             /></label>
             <strong id="mapTimeLabel">Caricamento…</strong>
+          </div>
+          <div class="chart-legend" id="mapLegend" aria-live="polite">
+            <span class="legend-item"
+              ><i class="legend-swatch rain"></i>colore = intensità precipitazione</span
+            >
+            <span class="legend-item"
+              ><i class="legend-swatch wind"></i>freccia = direzione vento</span
+            >
           </div>
           <div
             class="map-canvas"
@@ -1459,6 +1503,17 @@
           `${temperatures.length} ore disponibili · dataset ${payload.meta?.dataset || 'non dichiarato'}`;
         document.querySelector('#forecastSource').textContent =
           `${payload.meta?.source || 'provider'} · aggiornato ${formatTime(payload.meta?.retrievedAt || new Date())}`;
+        const maxTemp = temperatures.length
+          ? Math.max(...temperatures.map((point) => Number(point.value)))
+          : null;
+        document
+          .querySelector('#forecastLegend')
+          .setAttribute(
+            'aria-label',
+            maxTemp === null
+              ? 'Legenda forecast in caricamento'
+              : `Legenda forecast live. Temperatura massima nelle prossime ore ${formatTemp(maxTemp)}. Rosso acceso oltre 30 gradi.`,
+          );
       };
       const renderCurrent = (current) => {
         if (!current || typeof current.temperature_2m !== 'number') return;
@@ -1552,6 +1607,10 @@
           mapPoints.push(marker);
         });
         document.querySelector('#mapTimeLabel').textContent = time ? formatTime(time) : '—';
+        document.querySelector('#mapLegend').innerHTML =
+          mapLayer === 'wind'
+            ? '<span class="legend-item"><i class="legend-swatch wind"></i>freccia = direzione vento</span><span class="legend-item"><i class="legend-swatch"></i>colore = velocità km/h</span>'
+            : '<span class="legend-item"><i class="legend-swatch rain"></i>azzurro = pioggia debole</span><span class="legend-item"><i class="legend-swatch hot"></i>giallo/rosso = intensità crescente</span><span class="legend-item">valore espresso in mm/h</span>';
       };
       const loadLiveMap = async () => {
         try {
