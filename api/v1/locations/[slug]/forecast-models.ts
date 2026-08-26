@@ -50,9 +50,9 @@ export default async function handler(request: VercelRequest, response: VercelRe
         );
         providerUrl.searchParams.set(
           'daily',
-          'temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,weather_code',
+          'temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,weather_code',
         );
-        providerUrl.searchParams.set('forecast_days', '7');
+        providerUrl.searchParams.set('forecast_days', '14');
         providerUrl.searchParams.set('timezone', 'UTC');
         const upstream = await fetch(providerUrl);
         if (!upstream.ok)

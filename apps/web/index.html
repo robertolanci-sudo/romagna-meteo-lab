@@ -671,6 +671,27 @@
         width: auto;
         padding: 10px 14px;
       }
+      .daily-strip {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(116px, 1fr);
+        gap: 8px;
+        overflow-x: auto;
+        padding: 0 18px 18px;
+      }
+      .daily-card {
+        min-height: 142px;
+        padding: 13px 10px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.035);
+        text-align: center;
+      }
+      .daily-card time { display: block; color: var(--muted); font: 11px ui-monospace, monospace; }
+      .daily-card .weather-icon { height: 54px; font-size: 37px; }
+      .daily-card .daily-mean { display: block; font-size: 18px; font-weight: 600; }
+      .daily-card .daily-max { display: block; margin-top: 4px; color: var(--amber); font-size: 12px; }
+      .daily-card .daily-rain { display: block; margin-top: 8px; color: var(--cyan); font-size: 11px; }
       .source-note {
         margin-top: 16px;
         color: var(--muted);
@@ -999,6 +1020,17 @@
               <h3>Forecast Lab</h3>
               <p>Caricamento dei modelli…</p>
             </article>
+          </div>
+          <div class="panel-head">
+            <h2>Tendenza 14 giorni</h2>
+            <small>media / massima · consenso modelli</small>
+          </div>
+          <div
+            class="daily-strip"
+            id="forecast14Strip"
+            aria-label="Previsioni meteo per i prossimi 14 giorni"
+          >
+            <article class="daily-card"><p>Caricamento previsioni…</p></article>
           </div>
           <div class="detail-actions">
             <button class="quick" data-target="forecast-detail">Apri confronto completo →</button>
@@ -1698,6 +1730,19 @@
           document.querySelector('#forecastModelCards').innerHTML = modelCards;
           document.querySelector('#forecastPreviewCards').innerHTML = modelCards;
           const days = validModels[0]?.daily?.time || [];
+          document.querySelector('#forecast14Strip').innerHTML = days
+            .map((date, index) => {
+              const means = validModels.map((model) => model.daily?.temperature_2m_mean?.[index]).filter((value) => typeof value === 'number');
+              const maxima = validModels.map((model) => model.daily?.temperature_2m_max?.[index]).filter((value) => typeof value === 'number');
+              const rain = validModels.map((model) => model.daily?.precipitation_sum?.[index]).filter((value) => typeof value === 'number');
+              const mean = means.length ? means.reduce((sum, value) => sum + value, 0) / means.length : null;
+              const maximum = maxima.length ? maxima.reduce((sum, value) => sum + value, 0) / maxima.length : null;
+              const precipitation = rain.length ? rain.reduce((sum, value) => sum + value, 0) / rain.length : null;
+              const icon = weatherGlyph(Number(validModels.find((model) => typeof model.daily?.weather_code?.[index] === 'number')?.daily?.weather_code?.[index] ?? 0), Number(maximum ?? 0));
+              const day = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Rome' }).format(new Date(`${date}T12:00:00Z`));
+              return `<article class="daily-card"><time>${day}</time><div class="weather-icon ${icon.type}" title="${condition(Number(validModels[0]?.daily?.weather_code?.[index] ?? 0))}"><span>${icon.glyph}</span></div><strong class="daily-mean">${mean !== null ? formatTemp(mean) : '—'}</strong><span class="daily-max">max ${maximum !== null ? formatTemp(maximum) : '—'}</span><span class="daily-rain">${precipitation !== null ? `${precipitation.toFixed(1)} mm` : '—'}</span></article>`;
+            })
+            .join('');
           const todayMaxima = validModels
             .map((model) => model.daily?.temperature_2m_max?.[0])
             .filter((value) => typeof value === 'number');
