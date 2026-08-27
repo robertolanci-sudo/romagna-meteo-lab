@@ -161,10 +161,21 @@
         box-shadow: 0 0 0 4px rgba(118, 219, 177, 0.11);
       }
       .main {
+        display: flex;
+        flex-direction: column;
         width: min(1440px, 100%);
         min-width: 0;
         padding: 0 34px 50px;
       }
+      .main > .page-head { order: 1; }
+      .main > #forecast-live-preview {
+        order: 2;
+        border-color: rgba(78, 214, 233, 0.38);
+        background: linear-gradient(145deg, rgba(25, 35, 66, 0.94), rgba(18, 21, 43, 0.86));
+        box-shadow: 0 18px 70px rgba(19, 115, 145, 0.16), var(--shadow);
+      }
+      .main > .hero-grid { order: 3; }
+      .main > section:not(.page-head):not(#forecast-live-preview):not(.hero-grid) { order: 4; }
       .topbar {
         height: 76px;
         display: flex;
@@ -430,15 +441,19 @@
         place-items: center;
         color: #b1a8ff;
         font-size: 24px;
-        transition: color .25s ease, filter .25s ease, transform .25s ease;
+        transition: color 0.25s ease, filter 0.25s ease, transform 0.25s ease;
       }
       .weather-icon.hot { color: #ff392f; filter: drop-shadow(0 0 10px rgba(255, 57, 47, .7)); }
       .weather-icon.warm { color: #ff9d35; }
       .weather-icon.cool { color: #70d8ff; }
       .weather-icon.rainy { color: #53b9ef; }
       .weather-icon.storm { color: #ffe06a; filter: drop-shadow(0 0 8px rgba(255, 224, 106, .55)); }
-      .weather-icon span { display: block; animation: weatherFloat 2.8s ease-in-out infinite; }
-      @keyframes weatherFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+      .weather-icon span { display: block; animation: weatherFloat 3.8s ease-in-out infinite; transform-origin: 50% 70%; }
+      .weather-icon.rainy span { animation: weatherRain 1.8s ease-in-out infinite; }
+      .weather-icon.storm span { animation: weatherStorm 2.4s ease-in-out infinite; }
+      @keyframes weatherFloat { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.025); } }
+      @keyframes weatherRain { 0%,100% { transform: translateY(1px) rotate(-2deg); } 50% { transform: translateY(-2px) rotate(2deg); } }
+      @keyframes weatherStorm { 0%,72%,100% { transform: translateY(0) scale(1); } 76% { transform: translateY(-1px) scale(1.06); } 80% { transform: translateY(1px) scale(.98); } }
       .weather-scene {
         position: absolute;
         z-index: 1;
@@ -1533,13 +1548,14 @@
         return 'Condizione corrente';
       };
       const weatherGlyph = (code, temp) => {
-        if ([95, 96, 99].includes(code)) return { glyph: 'ϟ', type: 'storm' };
+        if ([95, 96, 99].includes(code)) return { glyph: '⛈️', type: 'storm' };
         if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code))
-          return { glyph: '☂', type: 'rainy' };
-        if ([45, 48].includes(code)) return { glyph: '☁', type: 'cool' };
-        if (temp > 30) return { glyph: '☀', type: 'hot' };
-        if (temp >= 25) return { glyph: '☀', type: 'warm' };
-        return { glyph: '☼', type: 'cool' };
+          return { glyph: '🌧️', type: 'rainy' };
+        if ([45, 48].includes(code)) return { glyph: '🌫️', type: 'cool' };
+        if ([1, 2, 3].includes(code)) return { glyph: '🌤️', type: temp > 30 ? 'hot' : 'warm' };
+        if (temp > 30) return { glyph: '☀️', type: 'hot' };
+        if (temp >= 25) return { glyph: '☀️', type: 'warm' };
+        return { glyph: '🌤️', type: 'cool' };
       };
       const renderWeatherScene = (code, temp) => {
         const scene = document.querySelector('#weatherScene');
