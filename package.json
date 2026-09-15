@@ -10,11 +10,12 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm --filter @romagna-meteo/web typecheck",
     "test": "vitest run",
-    "build": "tsc --noEmit",
+    "build": "pnpm --filter @romagna-meteo/web build",
     "security:audit": "pnpm audit --audit-level high",
-    "verify": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "verify": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "dev": "pnpm --filter @romagna-meteo/web dev"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

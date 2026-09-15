@@ -1,0 +1,324 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+@theme {
+  --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-ink: #eef1ff;
+  --color-muted: #949cbe;
+  --color-faint: #5d6485;
+  --color-abyss: #05060f;
+  --color-panel: #0d1024;
+  --color-panel-2: #141833;
+  --color-line: #232a4d;
+  --color-violet: #8879f7;
+  --color-cyan: #4ed6e9;
+  --color-mint: #76dbb1;
+  --color-amber: #f0c275;
+  --color-coral: #f4806f;
+
+  --radius-panel: 26px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-abyss);
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body.widget-body {
+    background: transparent;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-violet) 55%, transparent);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cyan);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Ambient field: deep radial washes + grain, never a flat color. */
+  .ambient-field {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(1100px 620px at 78% -8%, rgba(136, 121, 247, 0.26), transparent 62%),
+      radial-gradient(900px 560px at -6% 32%, rgba(78, 214, 233, 0.14), transparent 60%),
+      radial-gradient(760px 520px at 52% 108%, rgba(118, 219, 177, 0.1), transparent 58%);
+  }
+
+  .ambient-field::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.16;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  .panel {
+    position: relative;
+    border-radius: var(--radius-panel);
+    border: 1px solid color-mix(in oklab, var(--color-line) 82%, transparent);
+    background: linear-gradient(168deg, rgba(23, 28, 58, 0.92), rgba(9, 11, 26, 0.86));
+    box-shadow:
+      0 30px 90px -40px rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .panel-glow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      140deg,
+      rgba(136, 121, 247, 0.5),
+      transparent 45%,
+      rgba(78, 214, 233, 0.32)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .rail {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+  .rail::-webkit-scrollbar {
+    height: 6px;
+  }
+  .rail::-webkit-scrollbar-thumb {
+    background: var(--color-line);
+    border-radius: 99px;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Animated icon system. Every weather glyph is a live SVG:
+   no emoji anywhere in the interface.
+   --------------------------------------------------------------- */
+@layer utilities {
+  @keyframes wx-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes wx-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.07);
+      opacity: 0.86;
+    }
+  }
+  @keyframes wx-drift {
+    0%,
+    100% {
+      transform: translateX(-2.5%);
+    }
+    50% {
+      transform: translateX(2.5%);
+    }
+  }
+  @keyframes wx-fall {
+    0% {
+      transform: translateY(-28%);
+      opacity: 0;
+    }
+    18% {
+      opacity: 1;
+    }
+    75% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(72%);
+      opacity: 0;
+    }
+  }
+  @keyframes wx-flash {
+    0%,
+    62%,
+    100% {
+      opacity: 0.25;
+    }
+    68%,
+    78% {
+      opacity: 1;
+    }
+  }
+  @keyframes wx-flake {
+    0% {
+      transform: translateY(-24%) rotate(0deg);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(68%) rotate(190deg);
+      opacity: 0;
+    }
+  }
+  @keyframes wx-swell {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-24px);
+    }
+  }
+  @keyframes wx-breathe {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes wx-rise {
+    0% {
+      transform: translateY(18%);
+      opacity: 0;
+    }
+    40%,
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes wx-sweep {
+    0% {
+      transform: translateX(-120%);
+    }
+    100% {
+      transform: translateX(220%);
+    }
+  }
+
+  .wx-sun-core {
+    transform-origin: center;
+    animation: wx-pulse 3.4s ease-in-out infinite;
+  }
+  .wx-sun-rays {
+    transform-origin: center;
+    animation: wx-spin 26s linear infinite;
+  }
+  .wx-cloud {
+    animation: wx-drift 6.5s ease-in-out infinite;
+  }
+  .wx-cloud-slow {
+    animation: wx-drift 9.5s ease-in-out infinite reverse;
+  }
+  .wx-drop {
+    animation: wx-fall 1.25s linear infinite;
+  }
+  .wx-flake {
+    transform-origin: center;
+    animation: wx-flake 2.6s linear infinite;
+  }
+  .wx-bolt {
+    animation: wx-flash 2.1s ease-in-out infinite;
+  }
+  .wx-fog-bar {
+    animation: wx-drift 5s ease-in-out infinite;
+  }
+  .wx-wave {
+    animation: wx-swell 3.6s linear infinite;
+  }
+  .wx-breathe {
+    animation: wx-breathe 2.6s ease-in-out infinite;
+  }
+  .wx-rise {
+    animation: wx-rise 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .wx-sweep {
+    animation: wx-sweep 2.4s ease-in-out infinite;
+  }
+
+  .wx-d1 {
+    animation-delay: 0.18s;
+  }
+  .wx-d2 {
+    animation-delay: 0.36s;
+  }
+  .wx-d3 {
+    animation-delay: 0.54s;
+  }
+  .wx-d4 {
+    animation-delay: 0.72s;
+  }
+}
+
+/* Leaflet needs a concrete surface inside our dark shell. */
+.leaflet-container {
+  background: #0a0d1e;
+  font-family: var(--font-display);
+}
+.leaflet-tile {
+  filter: grayscale(1) invert(1) brightness(0.82) contrast(1.15) hue-rotate(185deg);
+}
+.leaflet-control-attribution {
+  background: rgba(5, 6, 15, 0.72) !important;
+  color: #7b83a6 !important;
+}
+.leaflet-control-attribution a {
+  color: #9aa3cb !important;
+}
+.wind-marker {
+  display: block;
+  color: var(--color-cyan);
+  font-size: 17px;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(78, 214, 233, 0.6);
+}
