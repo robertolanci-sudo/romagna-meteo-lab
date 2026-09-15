@@ -75,7 +75,7 @@ export function WidgetStudio({ origin }: { origin: string }) {
   const update = <K extends keyof WidgetConfig>(key: K, value: WidgetConfig[K]) =>
     setConfig((current) => ({ ...current, [key]: value }));
 
-  const url = useMemo(() => `${origin}/widget.html?${toQuery(config)}`, [origin, config]);
+  const url = useMemo(() => `${origin}/widget?${toQuery(config)}`, [origin, config]);
 
   const snippet = useMemo(
     () =>
